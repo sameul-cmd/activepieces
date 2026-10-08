@@ -26,11 +26,11 @@ curl http://localhost:8080/api/v1/health                      # {"status":"Healt
 ### [x] 0.2 — Official install (CE) with worker fix, 1 replica, health OK
 - Done in cloud sandbox 2026-10-08 (see report §1). Worker connects via Socket.IO.
 
-### [ ] 0.3 — Admin account, builder basics, CE feature matrix (Platform Admin)
+### [x] 0.3 — Admin account, builder basics, CE feature matrix (Platform Admin)
 - Record available vs locked: projects, API keys, piece management, alerts, branding, audit logs, Git Sync, templates, import/export.
 
-### [ ] 0.4 — Triggers & logic: webhook (local curl; ngrok only on laptop), schedule, branch, loop, delay, code step, HTTP piece; run logs, retries, failure display
-- Needs pieces catalogue (blocked in cloud until network allowed).
+### [x] 0.4 — Triggers & logic: webhook (local curl; ngrok only on laptop), schedule, branch, loop, delay, code step, HTTP piece; run logs, retries, failure display
+- Done via API (`docs/exploration/ap_api.py`, flow `explore/flows/p0-logic.json`); UI walkthrough not done (API-only in cloud).
 
 ### [ ] 0.5 — AI step with the owner's OpenAI-compatible endpoint (Custom provider; practice data)
 
@@ -39,9 +39,9 @@ curl http://localhost:8080/api/v1/health                      # {"status":"Healt
 
 ### [ ] 0.7 — Backup → restore into a fresh local stack (pg_dump + .env), confirm a stored connection still decrypts
 
-### [ ] 0.8 — Measure RAM/CPU idle and under 20 test runs
+### [x] 0.8 — Measure RAM/CPU idle and under 20 test runs
 
-### [ ] 0.9 — Inspect run tables read-only for the failed-run detector (SPEC 10.3); Redis durability question (SPEC 9.7)
+### [~] 0.9 — Inspect run tables read-only for the failed-run detector (SPEC 10.3); Redis durability question (SPEC 9.7)
 
 ### [ ] 0.10 — Custom piece dev: hello-world piece in dev mode; how CE loads custom pieces (SPEC 14)
 

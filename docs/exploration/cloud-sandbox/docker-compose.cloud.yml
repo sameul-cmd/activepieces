@@ -13,6 +13,7 @@ x-cloud: &cloud
     HTTPS_PROXY: http://host.docker.internal:35166
     HTTP_PROXY: http://host.docker.internal:35166
     NO_PROXY: localhost,127.0.0.1,app,worker,postgres,redis,host.docker.internal
+    AP_SANDBOX_PROPAGATED_ENV_VARS: HTTPS_PROXY,HTTP_PROXY,NO_PROXY,NODE_USE_ENV_PROXY,NODE_EXTRA_CA_CERTS
 services:
   app:
     <<: *cloud

@@ -1,0 +1,306 @@
+{
+ "displayName": "P0 logic test",
+ "schemaVersion": "16",
+ "trigger": {
+  "name": "trigger",
+  "type": "PIECE_TRIGGER",
+  "valid": true,
+  "displayName": "Catch Webhook",
+  "settings": {
+   "pieceName": "@activepieces/piece-webhook",
+   "pieceVersion": "0.1.42",
+   "pieceType": "OFFICIAL",
+   "packageType": "REGISTRY",
+   "triggerName": "catch_webhook",
+   "input": {
+    "authType": "none",
+    "authFields": {}
+   },
+   "propertySettings": {
+    "authType": {
+     "type": "MANUAL"
+    },
+    "authFields": {
+     "type": "MANUAL"
+    }
+   }
+  },
+  "nextAction": {
+   "name": "step_1",
+   "type": "CODE",
+   "valid": true,
+   "displayName": "Sum items",
+   "skip": false,
+   "settings": {
+    "sourceCode": {
+     "packageJson": "{}",
+     "code": "export const code = async (inputs) => { const items = inputs.items || []; if (inputs.fail) throw new Error('Deliberate failure for testing'); return { total: items.reduce((a, b) => a + Number(b), 0), items }; };"
+    },
+    "input": {
+     "items": "{{trigger['body']['items']}}",
+     "fail": "{{trigger['body']['fail']}}"
+    },
+    "errorHandlingOptions": {
+     "retryOnFailure": {
+      "value": false
+     },
+     "continueOnFailure": {
+      "value": false
+     }
+    }
+   },
+   "nextAction": {
+    "name": "step_2",
+    "type": "ROUTER",
+    "valid": true,
+    "displayName": "Big or small",
+    "skip": false,
+    "settings": {
+     "executionType": "EXECUTE_FIRST_MATCH",
+     "branches": [
+      {
+       "branchType": "CONDITION",
+       "branchName": "Big",
+       "conditions": [
+        [
+         {
+          "firstValue": "{{step_1['total']}}",
+          "operator": "NUMBER_IS_GREATER_THAN",
+          "secondValue": "10",
+          "caseSensitive": false
+         }
+        ]
+       ]
+      },
+      {
+       "branchType": "FALLBACK",
+       "branchName": "Otherwise"
+      }
+     ]
+    },
+    "children": [
+     {
+      "name": "step_3",
+      "type": "CODE",
+      "valid": true,
+      "displayName": "Mark big",
+      "skip": false,
+      "settings": {
+       "sourceCode": {
+        "packageJson": "{}",
+        "code": "export const code = async () => ({ size: 'big' });"
+       },
+       "input": {},
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      }
+     },
+     {
+      "name": "step_9",
+      "type": "CODE",
+      "valid": true,
+      "displayName": "Mark small",
+      "skip": false,
+      "settings": {
+       "sourceCode": {
+        "packageJson": "{}",
+        "code": "export const code = async () => ({ size: 'small' });"
+       },
+       "input": {},
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      }
+     }
+    ],
+    "nextAction": {
+     "name": "step_4",
+     "type": "LOOP_ON_ITEMS",
+     "valid": true,
+     "displayName": "Loop items",
+     "skip": false,
+     "settings": {
+      "items": "{{step_1['items']}}"
+     },
+     "firstLoopAction": {
+      "name": "step_8",
+      "type": "CODE",
+      "valid": true,
+      "displayName": "Double item",
+      "skip": false,
+      "settings": {
+       "sourceCode": {
+        "packageJson": "{}",
+        "code": "export const code = async (inputs) => ({ doubled: Number(inputs.item) * 2 });"
+       },
+       "input": {
+        "item": "{{step_4['item']}}"
+       },
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      }
+     },
+     "nextAction": {
+      "name": "step_5",
+      "type": "PIECE",
+      "valid": true,
+      "displayName": "Delay 2s",
+      "skip": false,
+      "settings": {
+       "pieceName": "@activepieces/piece-delay",
+       "pieceVersion": "0.3.35",
+       "pieceType": "OFFICIAL",
+       "packageType": "REGISTRY",
+       "actionName": "delayFor",
+       "input": {
+        "delayFor": 2,
+        "unit": "seconds"
+       },
+       "propertySettings": {
+        "delayFor": {
+         "type": "MANUAL"
+        },
+        "unit": {
+         "type": "MANUAL"
+        }
+       },
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      },
+      "nextAction": {
+       "name": "step_6",
+       "type": "PIECE",
+       "valid": true,
+       "displayName": "HTTP GET",
+       "skip": false,
+       "settings": {
+        "pieceName": "@activepieces/piece-http",
+        "pieceVersion": "0.12.2",
+        "pieceType": "OFFICIAL",
+        "packageType": "REGISTRY",
+        "actionName": "send_request",
+        "input": {
+         "method": "GET",
+         "url": "https://httpbin.org/get?from=activepieces",
+         "headers": {},
+         "queryParams": {},
+         "authType": "NONE",
+         "authFields": {},
+         "body_type": "none",
+         "body": {},
+         "failsafe": false
+        },
+        "propertySettings": {
+         "method": {
+          "type": "MANUAL"
+         },
+         "url": {
+          "type": "MANUAL"
+         },
+         "headers": {
+          "type": "MANUAL"
+         },
+         "queryParams": {
+          "type": "MANUAL"
+         },
+         "authType": {
+          "type": "MANUAL"
+         },
+         "authFields": {
+          "type": "MANUAL"
+         },
+         "body_type": {
+          "type": "MANUAL"
+         },
+         "body": {
+          "type": "MANUAL"
+         },
+         "failsafe": {
+          "type": "MANUAL"
+         }
+        },
+        "errorHandlingOptions": {
+         "retryOnFailure": {
+          "value": false
+         },
+         "continueOnFailure": {
+          "value": false
+         }
+        }
+       },
+       "nextAction": {
+        "name": "step_7",
+        "type": "PIECE",
+        "valid": true,
+        "displayName": "Reply",
+        "skip": false,
+        "settings": {
+         "pieceName": "@activepieces/piece-webhook",
+         "pieceVersion": "0.1.42",
+         "pieceType": "OFFICIAL",
+         "packageType": "REGISTRY",
+         "actionName": "return_response",
+         "input": {
+          "responseType": "json",
+          "respond": "stop",
+          "fields": {
+           "status": 200,
+           "headers": {},
+           "body": {
+            "total": "{{step_1['total']}}",
+            "branch": "done",
+            "http": "{{step_6['status']}}"
+           }
+          }
+         },
+         "propertySettings": {
+          "responseType": {
+           "type": "MANUAL"
+          },
+          "respond": {
+           "type": "MANUAL"
+          },
+          "fields": {
+           "type": "MANUAL"
+          }
+         },
+         "errorHandlingOptions": {
+          "retryOnFailure": {
+           "value": false
+          },
+          "continueOnFailure": {
+           "value": false
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

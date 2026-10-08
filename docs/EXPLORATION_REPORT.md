@@ -11,15 +11,46 @@
 | Free path used (keys, free tiers, local models) | No keys yet |
 | Setup time + problems hit (and fixes) | Image pull ~2 min (2.15 GB app image). Health OK 8 s after start once fixed. Problems: (1) GHCR blob storage blocked → pulled same digest from Docker Hub; Docker Hub 429 on `redis` → pulled from `mirror.gcr.io`. (2) App crash `listen EAFNOSUPPORT :::80` — `packages/server/api/src/main.ts` hard-codes `host: '::'`; on a kernel without IPv6 the app cannot start. Sandbox fix: `NODE_OPTIONS=--require ipv4-listen.cjs` shim (`docs/exploration/cloud-sandbox/`). (3) Containers' TLS is intercepted by the sandbox → `NODE_EXTRA_CA_CERTS`. (4) `cloud.activepieces.com` blocked → **0 pieces** in `piece_metadata`, builder unusable until allowed. (1)–(3) are sandbox-only; WSL/VPS should not need them *(to confirm on laptop)* |
 
+## 2a. CE feature matrix (platform plan on 0.92.2, `GET /api/v1/platforms/<id>` → `plan`, and `/api/v1/flags`)
+| Feature | CE | Notes |
+|---|---|---|
+| Unlimited flows/runs, builder, webhooks, schedules, branches, loops, code, HTTP | ✅ | |
+| Tables (built-in database) | ✅ `tablesEnabled` | 10,000 records / 100 fields per table |
+| AI providers (incl. **Custom OpenAI-compatible**) | ✅ `aiProvidersEnabled` | `AIProviderName.CUSTOM` exists |
+| Analytics | ✅ `analyticsEnabled` | |
+| Templates gallery (use) | ✅ | 420 official templates |
+| Run retention | 30 days (`EXECUTION_DATA_RETENTION_DAYS`) | |
+| Concurrency | 5 jobs default (`DEFAULT_CONCURRENT_JOBS_LIMIT`) | |
+| API keys | ❌ `apiKeysEnabled=false` | Automation must use a user JWT (sign-in) |
+| Built-in alerts UI | ❌ `SHOW_ALERTS=false` | → ops-hub + SQL detector is required (ADR-006/007 confirmed) |
+| Audit logs, SSO, SCIM, custom roles, project roles | ❌ | |
+| Branding/appearance, custom domains, "powered by" removal | ❌ | `SHOW_POWERED_BY_IN_FORM=true` |
+| Manage pieces / private pieces | ❌ `managePiecesEnabled=false`, `PRIVATE_PIECES_ENABLED=false` | → own image (Phase 8) is the route |
+| Manage templates | ❌ | |
+| Environments / Git Sync, secret managers, global connections, event streaming, embedding, agents, chat | ❌ | |
+| Team projects | ❌ (`billedTeamProjectsLimit=1`) | One stack per client (ADR-004 confirmed) |
+
 ## 2. Feature walkthrough
 | Feature | Tried with (sample data) | Result (works / partly / broken) | Notes, screenshots/log paths |
 |---|---|---|---|
+| Admin sign-up (first user = platform admin) | `POST /api/v1/authentication/sign-up` | works | Returns JWT + `platformId` + `projectId`; no default user |
+| Pieces catalogue | auto-sync from `cloud.activepieces.com` | works (after network fix) | 766 pieces; core pieces e.g. webhook 0.1.42, schedule 0.1.22, http 0.12.2, delay 0.3.35, tables 0.5.2, smtp 0.5.0, ai 0.11.0, gmail 0.17.4, google-sheets 0.17.1, slack 0.21.1, telegram-bot 0.8.1 |
+| Templates gallery | `GET /api/v1/templates` | works (read-only) | 420 official templates served from cloud; *managing* own templates is paid (`manageTemplatesEnabled=false`) |
+| Flow import via API | `POST /flows` + `IMPORT_FLOW` op, then `LOCK_AND_PUBLISH`, `CHANGE_STATUS ENABLED` | works | Helper `docs/exploration/ap_api.py`; uses the user JWT (CE has no API keys). Flow JSON = template `flows[0]` shape (`schemaVersion` "16") |
+| Webhook trigger (async + `/sync`) | `explore/flows/p0-logic.json` | works | `/api/v1/webhooks/<flowId>` (async 200), `/sync` returns the `return_response` body |
+| Code step | sum/throw | works | Throwing marks the run FAILED with message in `failedStep` |
+| Router (branch) | total > 10 → Big / Otherwise | works | `EXECUTE_FIRST_MATCH`, numeric operator |
+| Loop on items | 2–3 items | works | Iterations visible in run steps |
+| Delay | 2 s | works | |
+| HTTP piece | GET httpbin.org | works | In the sandbox needed `AP_SANDBOX_PROPAGATED_ENV_VARS` to pass proxy env to the engine (sandbox-only) |
+| Run log / failure display | API `GET /flow-runs/<id>` | works | Per-step status, input/output, `failedStep {name,message,displayName}` |
 
 ## 3. Performance on this machine
 | Task | Input size | Time | Notes |
 |---|---|---|---|
 | Cold start → `/api/v1/health` 200 | fresh DB (migrations) | ~8 s after containers up (cloud) | |
 | Idle RAM, whole stack | 0 flows | ≈ 870 MB | app 539 MB, worker 273 MB, postgres 51 MB, redis 5 MB; CPU ≈ 0.4% total |
+| 20 concurrent webhook runs (code + branch + loop + 2 s delay + HTTP) | 20 runs | all 20 SUCCEEDED within ~10 s | Peaks: worker 969 MiB / 361% CPU, app 900 MiB / 48%, postgres 105 MiB, redis 6 MiB → **≈ 2 GB total**. 4 GB per client is enough; worker is CPU-bound in bursts (1 replica used all 4 cores) |
 
 ## 4. Output quality
 What looked client-ready, what didn't, with examples.
@@ -31,6 +62,16 @@ Licenses, paid dependencies, data/privacy, stability, update pace.
 - **IPv6 must exist in the kernel**: the app listens on `::` (hard-coded). VPS images with `ipv6.disable=1` would crash-loop. Phase 2 `host bootstrap` should check this.
 - `.env.example` ships `AP_TELEMETRY_ENABLED=true` and `AP_TEMPLATES_SOURCE_URL=https://cloud.activepieces.com/...` (outbound calls to Activepieces from client stacks).
 - `AP_EDITION` valid values `ce|ee|cloud` (`packages/core/shared/src/lib/core/flag/flag.ts`); default is `ce` (`system.ts`). `ee`/`cloud` in production reject `AP_EXECUTION_MODE=UNSANDBOXED`; CE accepts it. Modes: `UNSANDBOXED`, `SANDBOX_CODE_ONLY`, `SANDBOX_PROCESS`, `SANDBOX_CODE_AND_PROCESS` *(which are usable on CE: to test in 0.4)*.
+- **Worker downloads piece bundles from the app's PUBLIC URL** (`AP_FRONTEND_URL` of the app, sent to the worker as `PUBLIC_URL`; `packages/server/sandbox/src/lib/cache/pieces/piece-installer.ts`, `worker.ts`). With `AP_FRONTEND_URL=http://localhost:8080` the worker can't reach it → publish fails with `TRIGGER_UPDATE_STATUS … fetch failed`. Local fix: `AP_FRONTEND_URL=http://host.docker.internal:8080` (+ hosts entry). **Phase 2:** render `extra_hosts: ["<domain>:host-gateway"]` on the worker so it reaches Caddy on the same host without hairpin NAT.
+- Failed-run detection (SPEC 10.3) verified: table `flow_run`, columns `id, status, "flowId", "flowVersionId", "projectId", environment ('PRODUCTION'), "failedStep" jsonb {name, message, displayName}, "startTime", "finishTime", created`; flow name from `flow_version."displayName"`. Statuses (`FlowRunStatus`): `FAILED, QUOTA_EXCEEDED, INTERNAL_ERROR, PAUSED, QUEUED, RUNNING, SUCCEEDED, MEMORY_LIMIT_EXCEEDED, TIMEOUT, CANCELED, LOG_SIZE_EXCEEDED`. Detector should treat `FAILED, INTERNAL_ERROR, TIMEOUT, MEMORY_LIMIT_EXCEEDED, QUOTA_EXCEEDED, LOG_SIZE_EXCEEDED` as failures. Index `idx_run_project_id_environment_status_created_archived_at` supports the query. Query:
+  ```sql
+  SELECT r.id, r.status, v."displayName" AS flow_name, r."flowId", r."failedStep"->>'name' AS step,
+         left(r."failedStep"->>'message', 300) AS error, r."finishTime"
+  FROM flow_run r JOIN flow_version v ON v.id = r."flowVersionId"
+  WHERE r.status IN ('FAILED','INTERNAL_ERROR','TIMEOUT','MEMORY_LIMIT_EXCEEDED','QUOTA_EXCEEDED','LOG_SIZE_EXCEEDED')
+    AND r."finishTime" > $since ORDER BY r."finishTime";
+  ```
+  Run link: `<AP_FRONTEND_URL>/runs/<id>` *(UI path to confirm)*.
 - Database has 70+ tables incl. `flow_run`, `trigger_run`, `alert`, `api_key`, `platform_plan`, `project` (detector + feature-matrix work in 0.3/0.9).
 
 ## 6. Matches the SPEC? (agent's view)
