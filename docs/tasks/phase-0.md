@@ -44,6 +44,7 @@ curl http://localhost:8080/api/v1/health                      # {"status":"Healt
 
 ### [x] 0.9 — Inspect run tables read-only for the failed-run detector (SPEC 10.3); Redis durability question (SPEC 9.7)
 
-### [ ] 0.10 — Custom piece dev: hello-world piece in dev mode; how CE loads custom pieces (SPEC 14)
+### [x] 0.10 — Custom piece dev: hello-world piece in dev mode; how CE loads custom pieces (SPEC 14)
 
-### [ ] 0.11 — Answer every *(verify)* item, finish `docs/EXPLORATION_REPORT.md`, owner review
+### [~] 0.11 — Answer every *(verify)* item, finish `docs/EXPLORATION_REPORT.md`, owner review
+- Report complete except AI items; owner questions in report §7.

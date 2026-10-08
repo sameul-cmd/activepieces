@@ -46,6 +46,9 @@
 | Schedule trigger | every 1 min (`p0-schedule`) | works | Ticks recorded as runs |
 | Long delay (pause/resume) | 3 min delay (`p0-delay`) | works | Run is `PAUSED` in DB (`waitpoint` table), resumes on time |
 | Stored connection | SECRET_TEXT for sendgrid/telegram-bot via `POST /api/v1/app-connections` | works | Referenced in steps as `{{connections['<externalId>']}}`; run logs show `**REDACTED**` |
+| Worker registered check | `GET /api/v1/worker-machines` (admin JWT) | works | Returns workers with `status: ONLINE` → use in `deploy`/smoke tests (SPEC 7.4 answered). Also `GET /api/v1/worker-machines/queue-metrics` |
+| Web UI served | `GET /` | works (200 HTML) | Interactive UI walkthrough not done in the cloud session (API-driven exploration); do a short click-through on the laptop |
+| **Custom piece on CE** | scaffold (`createPiece` from `packages/cli`) → `npm run build-piece` → `POST /api/v1/pieces` multipart `packageType=ARCHIVE, scope=PLATFORM` (admin JWT) | **works** | Piece `@activepieces/piece-p0-hello@0.0.1` listed as `CUSTOM/ARCHIVE`, used in a flow → `Hello Autonyx from a custom piece`. Archive stored in DB `file` table (`PACKAGE_ARCHIVE`) → included in `pg_dump`. Endpoint is CE code (`packages/server/api/src/app/pieces/community-piece-module.ts`, MIT), registered only for `ApEdition.COMMUNITY` |
 | Run log / failure display | API `GET /flow-runs/<id>` | works | Per-step status, input/output, `failedStep {name,message,displayName}` |
 
 ## 2b. Starter flows (SPEC 11) — built with built-in pieces (ADR-015)
@@ -65,12 +68,18 @@ Notes: `tables-find-records` returns rows as `{id, cells: {<fieldId>: {fieldName
 |---|---|---|---|
 | `pg_dump -Fc` of the DB | 5 flows, 766 pieces | 14.7 s, **90 MB** | `piece_metadata` = 240 MB of 240.5 MB DB size; flows/runs tiny |
 | Restore into a fresh stack (new volumes, port 8081) → healthy | 90 MB dump | ~51 s total (dump + new stack + restore + start) | Same `.env` (`AP_ENCRYPTION_KEY`) |
+| Dev toolchain `bun install --frozen-lockfile` | full monorepo | 288 s, 2.8 GB `node_modules` | 1 git-hosted dep 403 (`@modelcontextprotocol/sdk@github:dust-tt/...`) — not needed for pieces |
+| `build-piece` for a hello-world piece | 1 action | 30 s → 78 KB `.tgz` | needs `TS_NODE_TRANSPILE_ONLY=true` (see §5) |
 | Cold start → `/api/v1/health` 200 | fresh DB (migrations) | ~8 s after containers up (cloud) | |
 | Idle RAM, whole stack | 0 flows | ≈ 870 MB | app 539 MB, worker 273 MB, postgres 51 MB, redis 5 MB; CPU ≈ 0.4% total |
 | 20 concurrent webhook runs (code + branch + loop + 2 s delay + HTTP) | 20 runs | all 20 SUCCEEDED within ~10 s | Peaks: worker 969 MiB / 361% CPU, app 900 MiB / 48%, postgres 105 MiB, redis 6 MiB → **≈ 2 GB total**. 4 GB per client is enough; worker is CPU-bound in bursts (1 replica used all 4 cores) |
 
 ## 4. Output quality
 What looked client-ready, what didn't, with examples.
+
+- Flow engine is solid: every logic feature, delays (incl. pause/resume across restarts), schedules, tables and connections behaved correctly; failures carry clear step names and messages; secrets are redacted in run logs.
+- 420 ready templates are a strong sales asset (e.g. "Score and Qualify Inbound Leads", "Store Survey Results in a Table") — our 6 starters can borrow from them.
+- Not client-ready out of the box: no failure alerts on CE, no API keys, "Powered by Activepieces" on forms, `localhost` worker/public-URL trap, Redis-loss silently stops schedules until restart. These are exactly what opskit adds.
 
 ## 5. Limits & risks found
 Licenses, paid dependencies, data/privacy, stability, update pace.
@@ -94,9 +103,22 @@ Licenses, paid dependencies, data/privacy, stability, update pace.
 - **Backup size is dominated by `piece_metadata`** (re-downloadable from cloud). Phase 3 can test `pg_dump --exclude-table-data=piece_metadata` + re-sync on start, but custom/private piece metadata (Phase 8) also lives there → keep full dumps unless proven safe.
 - **Redis is not a source of truth (SPEC 9.7 answered):** after wiping Redis completely, schedules stopped and a due delayed run stayed `PAUSED`; after `restart app worker` the app's queue migrations (`packages/server/api/src/app/workers/migrations/refill-*.ts`, gated by Redis keys like `refill_paused_runs_v7`) re-created polling/schedule jobs and re-queued the paused run, which then SUCCEEDED. → Don't back up Redis; **after any Redis data loss, restart app+worker**; Phase 4 health check should detect "redis newer than app" and restart. Redis 7 image persists RDB to the `redis_data` volume on normal restarts.
 - Upstream `docker-compose.yml` hard-codes `container_name` (`activepieces-app`, `postgres`, `redis`) → two stacks on one host collide. Our rendered compose (Phase 2) must not set `container_name` (use `-p <client_id>`).
+- **Upstream CLI type error (0.92.2):** `npm run build-piece` fails under ts-node with `packages/core/utils/src/lib/deno.ts(58,64): TS2339 Property 'error' does not exist on type 'DenoResultMessage'`. Workaround without touching upstream: `TS_NODE_TRANSPILE_ONLY=true npm run build-piece <name>`. A new piece folder needs `bun install` (updates `bun.lock` → restore it or commit it deliberately with the piece).
+- **Docs vs code on private pieces:** docs (`build-pieces/misc/private-fork.mdx`) say private piece installation needs the paid edition, but CE 0.92.2 registers `POST /v1/pieces` (ARCHIVE or REGISTRY) for platform admins and it works. Risk: upstream could restrict it in a later release → re-test after every upstream sync; keep the own-image route (SPEC 14) as fallback.
+- **No API keys on CE** → automation (flow import, piece upload, smoke tests, reports) must sign in as a platform admin (`POST /api/v1/authentication/sign-in`) to get a JWT. Implication: each client stack needs an operator admin account whose password lives in the host `.env`/escrow.
 - Database has 70+ tables incl. `flow_run`, `trigger_run`, `alert`, `api_key`, `platform_plan`, `project` (detector + feature-matrix work in 0.3/0.9).
 
 ## 6. Matches the SPEC? (agent's view)
 Does the app behave as the SPEC assumes? List any mismatches that affect later phases; if none, say "no blockers — continuing".
 
+Mostly yes — no blockers. Confirmed: CE value `ce`; worker `AP_FRONTEND_URL=http://app` fix; 4 containers; data only in Postgres; `AP_ENCRYPTION_KEY` needed to decrypt connections; failed runs detectable by SQL; CE lacks alerts → ops-hub design holds; one stack per client.
+Mismatches / additions that change later phases:
+1. **Phase 8 (custom pieces):** CE can upload private piece archives via API — an own Docker image may be unnecessary. **Owner decision needed** (see §7).
+2. **Phase 2:** worker must reach the app's public URL → render `extra_hosts: <domain>:host-gateway` for the worker; check outbound access to `cloud.activepieces.com` + `registry.npmjs.org`; check kernel IPv6; don't use `container_name`; render `AP_TELEMETRY_ENABLED=false` (ADR-015); create an operator admin account (no API keys on CE).
+3. **Phases 3/6:** restored/staging stacks must disable flows before start (they fire schedules immediately); restore order = postgres → `pg_restore --no-owner` → app+worker; backup ≈ 90 MB per client mostly piece catalogue.
+4. **Phase 4:** add a check "Redis restarted after app → restart app+worker" (schedules/delays otherwise stop); `worker-machines` endpoint for worker health.
+5. **Phase 5:** flows import via `IMPORT_FLOW` API with admin JWT; Tables referenced by `externalId` make templates portable; `opskit flows import` can be fully automatic (not only printed instructions).
+
 ## 7. Questions for the owner (only if blocked or unclear)
+1. **Phase 8:** switch from "build our own Docker image with custom pieces" to "upload custom pieces to each client via the CE API (built in CI, uploaded by `opskit`)", keeping the image route only as a fallback? (Agent recommends: yes — simpler, no GHCR builds, faster.)
+2. **AI endpoint:** provide `OPSKIT_AI_BASE_URL`, `OPSKIT_AI_API_KEY`, `OPSKIT_AI_MODEL` as environment variables to finish task 0.5 and starter flows 2 and 6 (can also be finished later on the laptop).
