@@ -57,7 +57,7 @@
 | 5 | Safe upgrade runbook/script (checklist, backup, staging, smoke tests, rollback) | 6 |
 | 6 | Client handover docs (flow one-pagers, pause guide, credential ownership) | 7 |
 | 7 | Monthly care report | 7 |
-| 8 | Custom pieces + own Docker image from the fork | 8 |
+| 8 | Custom pieces uploaded to client stacks via the CE API (own image only as fallback, ADR-016) | 8 |
 
 ### V2 (not now)
 Single multi-tenant install (needs paid Projects), UI white-label (paid), Kubernetes/Helm, a web control panel for the fleet, automatic Zapier import, client self-service portal, embedding.
@@ -76,7 +76,7 @@ Single multi-tenant install (needs paid Projects), UI white-label (paid), Kubern
 8. **Idempotent scripts.** Re-running any `opskit` command converges to the same state; destructive steps require `--yes` plus an explicit confirmation prompt with the client id.
 9. **Observability through the ops-hub.** Client hosts push heartbeats and alerts to the ops-hub webhook; the ops-hub routes to channels. If the ops-hub is down, host scripts fall back to direct email (msmtp) *(inferred)*.
 10. **Scripts are Bash (Linux).** `opskit/bin/opskit` dispatcher + `opskit/lib/*.sh`; shellcheck-clean; bats tests. Small helpers may use `jq`, `yq`, `envsubst`, `curl`, `rclone`, `age`. No Python/Node required on hosts.
-11. **Custom pieces follow upstream piece conventions** in `packages/pieces/custom/<name>` and are shipped only via our image built by CI; never hot-patch a running container.
+11. **Custom pieces follow upstream piece conventions** in `packages/pieces/custom/<name>` and are shipped only as CI-built archives uploaded with `opskit pieces push` (ADR-016); never hot-patch a running container.
 
 ---
 
@@ -94,7 +94,7 @@ Single multi-tenant install (needs paid Projects), UI white-label (paid), Kubern
 | Monitoring | Ops-hub: owner's Activepieces stack (alert router + report flows) + Uptime Kuma; UptimeRobot free as an external second check |
 | Alerts | Telegram bot (demo + clients), email (SMTP), Slack (incoming webhook), WhatsApp (Meta WhatsApp Cloud API, client-provided *(verify setup/cost)*) |
 | Tests | shellcheck, bats-core, docker-based integration tests in WSL; upstream test runner for custom pieces |
-| CI | GitHub Actions `opskit-ci.yml` (shellcheck + bats) and `opskit-image.yml` (build + push CE image with custom pieces to GHCR) |
+| CI | GitHub Actions `opskit-ci.yml` (shellcheck + bats) and `opskit-pieces.yml` (build custom piece archives; ADR-016) |
 
 ---
 
@@ -110,7 +110,7 @@ Single multi-tenant install (needs paid Projects), UI white-label (paid), Kubern
 
 ## 6. Client registry & configuration
 
-`opskit/clients/<client_id>/client.yaml` fields: `client_id` (slug), `name`, `contact` (email), `domain` (e.g. `auto.client.com`), `host` {`name`, `ip`, `ssh_user`, `mode`: `dedicated|shared`}, `image` {`repo` (default `ghcr.io/<owner>/activepieces`), `tag`}, `ap_version` (upstream release it's based on), `workers` {`replicas`: default 1, `memory_limit`}, `app` {`memory_limit`}, `port` (shared mode: auto-allocated), `timezone`, `alerts` {`channels`: [`telegram`, `email`, `slack`, `whatsapp`], per-channel targets}, `backup` {`schedule` (default daily 02:30 host time), `retention_days` (14 local / 30 remote), `remote` (rclone remote name)}, `report` {`recipients`, `day_of_month`: 1}, `support` {`response_hours`: 12}, `created_at`, `status` (`draft|deployed|paused|offboarded`).
+`opskit/clients/<client_id>/client.yaml` fields: `client_id` (slug), `name`, `contact` (email), `domain` (e.g. `auto.client.com`), `host` {`name`, `ip`, `ssh_user`, `mode`: `dedicated|shared`}, `image` {`repo` (default `activepieces/activepieces`), `tag`}, `pieces` (list of custom piece names+versions to install), `ap_version` (upstream release it's based on), `workers` {`replicas`: default 1, `memory_limit`}, `app` {`memory_limit`}, `port` (shared mode: auto-allocated), `timezone`, `alerts` {`channels`: [`telegram`, `email`, `slack`, `whatsapp`], per-channel targets}, `backup` {`schedule` (default daily 02:30 host time), `retention_days` (14 local / 30 remote), `remote` (rclone remote name)}, `report` {`recipients`, `day_of_month`: 1}, `support` {`response_hours`: 12}, `created_at`, `status` (`draft|deployed|paused|offboarded`).
 Rendered per client: `compose.yml`, `.env`, `Caddy` site block, `cron` entries, `docs/`.
 
 ---
@@ -165,10 +165,11 @@ Our fork's own upstream sync (new Activepieces releases → new image) follows `
 - `opskit docs <id>` renders client docs from templates: overview of active flows (from template READMEs + client notes), "how to pause a flow", credential ownership checklist, support/response-time promise, backup and data-location summary.
 - `opskit report <id> --month YYYY-MM`: runs total/succeeded/failed per flow (read-only SQL *(verify)*), uptime % (Uptime Kuma API *(verify)*), backups (count, last success, last restore test), upgrades applied, incidents, hours used vs included; rendered HTML + PDF-friendly; delivered via the ops-hub `monthly-report-sender` flow (email) on `report.day_of_month`.
 
-## 14. Custom pieces & own image (Improvement 8)
-- Develop pieces in `packages/pieces/custom/<name>` using upstream's CLI and conventions *(verify current commands: create/build/test)*; first piece: `opskit-heartbeat` (action: send heartbeat/event to ops-hub) as the reference implementation.
-- `opskit-image.yml` builds the CE image from our fork (pinned tag + custom pieces) and pushes to GHCR as `ghcr.io/<owner>/activepieces:<upstream-tag>-ops.<n>`; build runs on GitHub Actions (too heavy for the 12 GB laptop *(verify)*).
-- Verify how CE loads bundled custom pieces (piece source/sync settings) *(verify)*; document the working method in ADR.
+## 14. Custom pieces via CE piece upload (Improvement 8) — changed by owner 2026-10-08 (ADR-016)
+- Develop pieces in `packages/pieces/custom/<name>` with upstream's CLI (`createPiece`, `TS_NODE_TRANSPILE_ONLY=true npm run build-piece <name>`, verified in Phase 0); first piece: `opskit-heartbeat` (action: send heartbeat/event to ops-hub) as the reference implementation.
+- `opskit-pieces.yml` (CI) builds each custom piece into a versioned `.tgz` and attaches it to a GitHub release/artifact; `opskit pieces push <client_id>` uploads the archives to the client stack via `POST /api/v1/pieces` (`packageType=ARCHIVE`, `scope=PLATFORM`, operator admin JWT). Idempotent: skip versions already installed.
+- Client stacks keep the **official** pinned image (`activepieces/activepieces:<tag>`); no own image.
+- Fallback (only if a future upstream release blocks CE piece upload): build our own image as originally planned (`opskit-image.yml` → GHCR). Re-test the upload after every upstream sync.
 
 ## 15. Security
 SSH keys only; root login disabled; ufw; unattended upgrades; containers not exposing Postgres/Redis ports publicly; Caddy only public entry; secrets in `.env` with 600 permissions; `age` escrow; client credentials inside Activepieces are encrypted by `AP_ENCRYPTION_KEY` (never rotate it without the documented procedure); least-privilege read-only DB role for detectors/reports *(inferred)*; alert payloads never include secrets or full personal data.
@@ -214,9 +215,9 @@ Six templates with `flow.json`, README, test payloads, checklist, error-notifica
 `docs` generator, credential ownership checklist, `report` (runs/failures/uptime/backups/upgrades/incidents/hours), `monthly-report-sender` flow.
 **Accept:** report numbers for a demo month match fixture DB counts exactly; generated handover docs list every active flow with pause instructions; report email is delivered via the ops-hub to a test inbox.
 
-### Phase 8 — Custom pieces & own image (Improvement 8)
-`packages/pieces/custom/opskit-heartbeat`, piece tests, `opskit-image.yml` building the CE image with custom pieces → GHCR, deploy kit switched to our image, verified loading method (ADR).
-**Accept:** CI publishes `ghcr.io/<owner>/activepieces:<tag>-ops.1`; a stack deployed from it shows the `opskit-heartbeat` piece in the builder and a flow using it reaches the ops-hub; image runs as CE (no license prompts, no ee features enabled).
+### Phase 8 — Custom pieces via upload (Improvement 8, ADR-016)
+`packages/pieces/custom/opskit-heartbeat`, piece tests, `opskit-pieces.yml` building piece archives, `opskit pieces push|list <id>`, upload re-test added to `docs/UPSTREAM_SYNC.md`.
+**Accept:** CI produces `opskit-heartbeat-<version>.tgz`; `opskit pieces push demo` installs it on a fresh local stack (re-run is a no-op); the piece appears in the builder and a flow using it reaches the ops-hub; the piece survives backup → restore; stack runs the official CE image.
 
 ### Phase 9 — Field readiness
 Practice production run on a real VPS (Oracle Always Free if capacity allows, else a ~$5 VPS, deleted after): host bootstrap → client deploy with real domain + HTTPS → 2 templates live → backup → off-server copy → restore test → upgrade dry run → care report; `docs/OPERATOR_GUIDE.md`; pricing worksheet (VPS cost per client for dedicated vs shared); 3-minute demo script (roadmap Loom).

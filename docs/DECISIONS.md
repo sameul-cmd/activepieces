@@ -84,3 +84,10 @@ Format: Context → Decision → Alternatives → Consequences. Never delete; ma
 - **Status:** accepted (owner)
 - **Decision:** Ops-hub at `automate.autonyxai.shop`; VPS provider-neutral (free tier first); backups to Google Drive via rclone (configurable); 12 h response; AI = owner's OpenAI-compatible endpoint via Activepieces `CUSTOM` provider; Phase 0 flows on built-in pieces; client stacks `AP_TELEMETRY_ENABLED=false`.
 - **Consequences:** `client.yaml`/`host.yaml` schemas keep provider and backup remote as free fields; Google Drive needs an rclone OAuth token per host (Phase 3 documents it).
+
+### ADR-016: Custom pieces are uploaded via the CE API, not baked into an own image (amends ADR-001)
+- **Status:** accepted (owner, 2026-10-08)
+- **Context:** Phase 0 proved CE 0.92.2 accepts private piece archives (`POST /api/v1/pieces`, `ARCHIVE`, platform admin) and runs them; archives are stored in the DB and survive backups. The docs call this a paid feature, but the endpoint is CE (MIT) code.
+- **Decision:** Build piece `.tgz` archives in CI; `opskit pieces push` uploads them per client. Clients run the official pinned image. The fork stays (pieces live in it; ADR-001 otherwise unchanged).
+- **Alternatives:** own GHCR image with bundled pieces (original plan; kept as fallback).
+- **Consequences:** No image builds/registry; must re-test the upload after each upstream sync; each client needs an operator admin account (no API keys on CE).

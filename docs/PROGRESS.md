@@ -1,17 +1,16 @@
 # Progress
 
 ## Current status
-- **Current phase:** Phase 0 — Fork, set up & explore Activepieces
-- **Current task:** none yet → next step is the `explore` workflow (see Handoff)
+- **Current phase:** Phase 1 — Opskit foundation
+- **Current task:** task file `docs/tasks/phase-1.md` created; next: 1.1
 - **Last updated:** 2026-10-08
 
 ## Handoff
 <!-- Overwritten by the `handoff` workflow at the end of every session. The next agent starts here. -->
 - **Agent / environment:** Claude Code, cloud sandbox (Ubuntu, Docker 29, 4 CPU, 15 GB RAM, no IPv6; network "Full" but containers need the relay — `docs/exploration/cloud-sandbox/`)
 - **Repo / branch:** `sameul-cmd/activepieces`, branch `opskit-main` (= tag `0.92.2` + our commits)
-- **Done:** Phase 0 tasks 0.1–0.4, 0.7–0.10; 0.6 (4 of 6 starter flows tested; 2 and 6 built). `docs/EXPLORATION_REPORT.md` is complete except the AI step. Verified facts: `docs/ASSUMPTIONS.md`.
-- **Waiting on owner:** (1) Phase 8 decision — upload custom pieces via CE API instead of own image (report §7); (2) AI endpoint env vars `OPSKIT_AI_BASE_URL`, `OPSKIT_AI_API_KEY`, `OPSKIT_AI_MODEL` for task 0.5 + flows 2/6.
-- **Exact next step:** after owner answers → finish 0.5/0.6 (configure AI provider "Custom" in the stack, import `docs/exploration/starter-flows/02-*.json` and `06-*.test.json` with `starter_flows.py <out> <notify> custom <model>`), mark Phase 0 verified, then `start-phase` for Phase 1. Phase 1 can also start without the AI items (they don't block it).
+- **Done:** Phase 0 (report accepted; AI deferred). Phase 8 switched to piece uploads (ADR-016). Phase 1 task file written.
+- **Exact next step:** Phase 1 task 1.1 in `docs/tasks/phase-1.md` (owner asked to review the 3 open questions at its top; defaults apply if no answer).
 - **Not carried over (temporary):** local stack in `explore/stack/` (admin creds in `explore/stack/admin.txt`, JWT in `.token`), tables `opskit_leads`/`opskit_invoices`, custom piece `packages/pieces/custom/p0-hello/` (git-excluded scratch; source copy in `docs/exploration/p0-hello-piece/`), `node_modules` (2.8 GB). A new session must re-create the stack (`docs/tasks/phase-0.md`).
 - **Owner confirmed (2026-10-08):** 8 improvements as written; flow #6 = generic monthly report (ADR-014); answers in ADR-015.
 - **Owner to-dos:** optionally make `opskit-main` the fork's default branch.
@@ -19,8 +18,8 @@
 ## Phases
 | Phase | Name | Status | Verified |
 |---|---|---|---|
-| 0 | Fork, set up & explore Activepieces | Nearly done (AI step + 2 AI flows pending owner input) | — |
-| 1 | Opskit foundation | Not started | — |
+| 0 | Fork, set up & explore Activepieces | Done (AI step + flows 2/6 deferred by owner) | 2026-10-08 (owner accepted report) |
+| 1 | Opskit foundation | In progress | — |
 | 2 | Client deployment kit | Not started | — |
 | 3 | Backups & restore | Not started | — |
 | 4 | Monitoring & alerts | Not started | — |
@@ -38,6 +37,7 @@
 
 ## Known issues
 <!-- Bugs or gaps found outside current task scope. -->
+- **Deferred by owner (2026-10-08):** Phase 0 task 0.5 (AI step) and starter flows 2 + 6 tests — need `OPSKIT_AI_BASE_URL/API_KEY/MODEL`; pick up in Phase 5 at the latest.
 - The roadmap `05-activepieces-roadmap.md` is not in the repo; its starter list contained an unrelated "Elmo" flow, now replaced (ADR-014). If the roadmap turns up, check it for other mixed-in items.
 - Upstream already ships `packages/pieces/custom/` (empty `README.md`) and a `.claude/` folder; the original package assumed neither existed. We only add files there (no upstream edits).
 

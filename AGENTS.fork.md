@@ -2,7 +2,7 @@
 
 > **Any AI coding agent (Claude Code, Kilo Code, Cursor, Codex, Cline, Roo, Windsurf, Copilot, Factory…) starts here.** This project is built across several agents and sessions; the repo — not the chat — is the memory. Read this file, then `docs/PROGRESS.md` → **Handoff**, then continue.
 
-This repo is the owner's fork of Activepieces (open-source Zapier alternative, MIT Community Edition) plus **opskit**: tooling to deploy, back up, monitor, upgrade, document and report on one Activepieces stack per client, a flow template library, and custom pieces built into the owner's own Docker image.
+This repo is the owner's fork of Activepieces (open-source Zapier alternative, MIT Community Edition) plus **opskit**: tooling to deploy, back up, monitor, upgrade, document and report on one Activepieces stack per client, a flow template library, and custom pieces uploaded to each client stack (ADR-016).
 
 **Two instruction sets apply.** Upstream's root `AGENTS.md`/`CLAUDE.md`, `.claude/rules/*` (except `opskit.md`), `.agents/` and `brain/` govern upstream code. This file, `docs/SPEC.md` and `docs/ai-workflow/rules/` govern opskit. On conflict: upstream conventions for how to edit upstream files; SPEC for what opskit does.
 

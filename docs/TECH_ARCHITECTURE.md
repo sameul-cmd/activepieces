@@ -7,7 +7,7 @@
 flowchart LR
   OP[Owner laptop - WSL2] -->|ssh + opskit| H1[Dedicated host - client A stack]
   OP -->|ssh + opskit| H2[Shared host - clients B, C stacks]
-  GH[GitHub fork + Actions] -->|image ghcr.io/owner/activepieces| H1
+  GH[GitHub fork + Actions] -->|custom piece archives, opskit pieces push| H1
   GH --> H2
   H1 -->|heartbeats, failed runs, backups status| HUB[Ops-hub: Activepieces + Uptime Kuma]
   H2 --> HUB
@@ -36,7 +36,7 @@ opskit/
   clients/              git-ignored registry
   tests/                bats tests + fixtures
 packages/pieces/custom/<name>   our pieces
-.github/workflows/opskit-ci.yml, opskit-image.yml
+.github/workflows/opskit-ci.yml, opskit-pieces.yml
 docs/                   SPEC, ADRs, runbooks/
 ```
 Dependency direction: `bin → lib → templates/schema`; host agent scripts are standalone (no repo needed on hosts).
