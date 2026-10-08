@@ -1,3 +1,5 @@
+> **Fork note:** this repo also contains the owner's *Automation Ops Kit*. For any opskit work, read [`AGENTS.fork.md`](AGENTS.fork.md) first (status: `docs/PROGRESS.md` → Handoff).
+
 # Activepieces
 
 Open-source AI-first workflow automation platform. Self-hosted or cloud. 400+ pieces. MCP support.

@@ -1,0 +1,16 @@
+{
+  // Opskit entry doc + rules, loaded into every Kilo task. Upstream AGENTS.md at the root is read by Kilo automatically.
+  // Rules live in docs/ai-workflow/ so every AI agent (Kilo, Claude Code, Cursor, Codex…) shares one copy.
+  "instructions": [
+    "AGENTS.fork.md",
+    "docs/ai-workflow/rules/01-workflow.md",
+    "docs/ai-workflow/rules/02-architecture.md",
+    "docs/ai-workflow/rules/03-security.md",
+    "docs/ai-workflow/rules/04-upstream-fork.md",
+    "docs/ai-workflow/rules/05-ops-scripts.md",
+    "docs/ai-workflow/rules/06-reliability.md",
+    "docs/ai-workflow/rules/07-pieces-flows.md",
+    "docs/ai-workflow/rules/08-testing-quality.md",
+    "docs/ai-workflow/rules/09-git.md"
+  ]
+}

@@ -1,0 +1,15 @@
+# Files the agent must not read
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+opskit/clients/
+opskit/hosts/
+*.age
+*.sql
+*.sql.gz
+node_modules/
+dist/
