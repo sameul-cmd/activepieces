@@ -37,11 +37,11 @@ curl http://localhost:8080/api/v1/health                      # {"status":"Healt
 ### [ ] 0.6 — Build the 6 starter flows as far as free/built-in pieces allow; export each flow JSON to `explore/flows/`
 - 1 lead capture · 2 AI email sorter · 3 review request · 4 invoice reminder · 5 social lead alert · 6 generic monthly report (ADR-014)
 
-### [ ] 0.7 — Backup → restore into a fresh local stack (pg_dump + .env), confirm a stored connection still decrypts
+### [x] 0.7 — Backup → restore into a fresh local stack (pg_dump + .env), confirm a stored connection still decrypts
 
 ### [x] 0.8 — Measure RAM/CPU idle and under 20 test runs
 
-### [~] 0.9 — Inspect run tables read-only for the failed-run detector (SPEC 10.3); Redis durability question (SPEC 9.7)
+### [x] 0.9 — Inspect run tables read-only for the failed-run detector (SPEC 10.3); Redis durability question (SPEC 9.7)
 
 ### [ ] 0.10 — Custom piece dev: hello-world piece in dev mode; how CE loads custom pieces (SPEC 14)
 

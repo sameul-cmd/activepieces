@@ -43,11 +43,16 @@
 | Loop on items | 2–3 items | works | Iterations visible in run steps |
 | Delay | 2 s | works | |
 | HTTP piece | GET httpbin.org | works | In the sandbox needed `AP_SANDBOX_PROPAGATED_ENV_VARS` to pass proxy env to the engine (sandbox-only) |
+| Schedule trigger | every 1 min (`p0-schedule`) | works | Ticks recorded as runs |
+| Long delay (pause/resume) | 3 min delay (`p0-delay`) | works | Run is `PAUSED` in DB (`waitpoint` table), resumes on time |
+| Stored connection | SECRET_TEXT for sendgrid/telegram-bot via `POST /api/v1/app-connections` | works | Referenced in steps as `{{connections['<externalId>']}}`; run logs show `**REDACTED**` |
 | Run log / failure display | API `GET /flow-runs/<id>` | works | Per-step status, input/output, `failedStep {name,message,displayName}` |
 
 ## 3. Performance on this machine
 | Task | Input size | Time | Notes |
 |---|---|---|---|
+| `pg_dump -Fc` of the DB | 5 flows, 766 pieces | 14.7 s, **90 MB** | `piece_metadata` = 240 MB of 240.5 MB DB size; flows/runs tiny |
+| Restore into a fresh stack (new volumes, port 8081) → healthy | 90 MB dump | ~51 s total (dump + new stack + restore + start) | Same `.env` (`AP_ENCRYPTION_KEY`) |
 | Cold start → `/api/v1/health` 200 | fresh DB (migrations) | ~8 s after containers up (cloud) | |
 | Idle RAM, whole stack | 0 flows | ≈ 870 MB | app 539 MB, worker 273 MB, postgres 51 MB, redis 5 MB; CPU ≈ 0.4% total |
 | 20 concurrent webhook runs (code + branch + loop + 2 s delay + HTTP) | 20 runs | all 20 SUCCEEDED within ~10 s | Peaks: worker 969 MiB / 361% CPU, app 900 MiB / 48%, postgres 105 MiB, redis 6 MiB → **≈ 2 GB total**. 4 GB per client is enough; worker is CPU-bound in bursts (1 replica used all 4 cores) |
@@ -72,6 +77,11 @@ Licenses, paid dependencies, data/privacy, stability, update pace.
     AND r."finishTime" > $since ORDER BY r."finishTime";
   ```
   Run link: `<AP_FRONTEND_URL>/runs/<id>` *(UI path to confirm)*.
+- **Backup → restore verified (SPEC 9, Phase 3 acceptance shape):** `pg_dump -Fc` via the postgres container + `.env` copy → fresh stack (`postgres`+`redis` up, `pg_restore --no-owner`, then app+worker) → same admin login works, all 5 flows present and ENABLED, the stored connection decrypts (fingerprint check flow `docs/exploration/p0-conn.flow.json` returns identical hash). Without the same `AP_ENCRYPTION_KEY` this would fail.
+- **Restored copies run scheduled flows immediately** (both stacks fired `P0 schedule`). Staging/restore-test stacks (Phases 3, 6) must disable flows after restore (e.g. `UPDATE flow SET status='DISABLED'` before app start *(to verify that triggers are then not registered)*) and/or block outbound mail, or clients get duplicate actions.
+- **Backup size is dominated by `piece_metadata`** (re-downloadable from cloud). Phase 3 can test `pg_dump --exclude-table-data=piece_metadata` + re-sync on start, but custom/private piece metadata (Phase 8) also lives there → keep full dumps unless proven safe.
+- **Redis is not a source of truth (SPEC 9.7 answered):** after wiping Redis completely, schedules stopped and a due delayed run stayed `PAUSED`; after `restart app worker` the app's queue migrations (`packages/server/api/src/app/workers/migrations/refill-*.ts`, gated by Redis keys like `refill_paused_runs_v7`) re-created polling/schedule jobs and re-queued the paused run, which then SUCCEEDED. → Don't back up Redis; **after any Redis data loss, restart app+worker**; Phase 4 health check should detect "redis newer than app" and restart. Redis 7 image persists RDB to the `redis_data` volume on normal restarts.
+- Upstream `docker-compose.yml` hard-codes `container_name` (`activepieces-app`, `postgres`, `redis`) → two stacks on one host collide. Our rendered compose (Phase 2) must not set `container_name` (use `-p <client_id>`).
 - Database has 70+ tables incl. `flow_run`, `trigger_run`, `alert`, `api_key`, `platform_plan`, `project` (detector + feature-matrix work in 0.3/0.9).
 
 ## 6. Matches the SPEC? (agent's view)
