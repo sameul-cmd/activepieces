@@ -1,0 +1,200 @@
+{
+ "displayName": "06 Monthly report",
+ "schemaVersion": "16",
+ "trigger": {
+  "name": "trigger",
+  "type": "PIECE_TRIGGER",
+  "valid": true,
+  "displayName": "Monthly, day 1 08:00",
+  "settings": {
+   "pieceName": "@activepieces/piece-schedule",
+   "pieceVersion": "0.1.22",
+   "pieceType": "OFFICIAL",
+   "packageType": "REGISTRY",
+   "triggerName": "every_month",
+   "input": {
+    "day_of_the_month": 1,
+    "hour_of_the_day": 8,
+    "timezone": "UTC"
+   },
+   "propertySettings": {
+    "day_of_the_month": {
+     "type": "MANUAL"
+    },
+    "hour_of_the_day": {
+     "type": "MANUAL"
+    },
+    "timezone": {
+     "type": "MANUAL"
+    }
+   }
+  },
+  "nextAction": {
+   "name": "step_1",
+   "type": "PIECE",
+   "valid": true,
+   "displayName": "Pull numbers (sheet/API stand-in)",
+   "skip": false,
+   "settings": {
+    "pieceName": "@activepieces/piece-tables",
+    "pieceVersion": "0.5.2",
+    "pieceType": "OFFICIAL",
+    "packageType": "REGISTRY",
+    "actionName": "tables-find-records",
+    "input": {
+     "table_id": "opskit_invoices",
+     "filters": {},
+     "limit": 1000
+    },
+    "propertySettings": {
+     "table_id": {
+      "type": "MANUAL"
+     },
+     "filters": {
+      "type": "MANUAL"
+     },
+     "limit": {
+      "type": "MANUAL"
+     }
+    },
+    "errorHandlingOptions": {
+     "retryOnFailure": {
+      "value": false
+     },
+     "continueOnFailure": {
+      "value": false
+     }
+    }
+   },
+   "nextAction": {
+    "name": "step_2",
+    "type": "CODE",
+    "valid": true,
+    "displayName": "Compute KPIs",
+    "skip": false,
+    "settings": {
+     "sourceCode": {
+      "packageJson": "{}",
+      "code": "export const code = async (i) => { const rows = (i.rows || []).map(r => Object.fromEntries((r.cells ? Object.values(r.cells) : []).map(c => [c.fieldName, c.value]))); const paid = rows.filter(r => String(r.status).toLowerCase() === 'paid'); const sum = a => a.reduce((s, r) => s + Number(r.amount || 0), 0); return { invoices: rows.length, paid: paid.length, unpaid: rows.length - paid.length, revenue: sum(paid), outstanding: sum(rows) - sum(paid) }; };"
+     },
+     "input": {
+      "rows": "{{step_1}}"
+     },
+     "errorHandlingOptions": {}
+    },
+    "nextAction": {
+     "name": "step_3",
+     "type": "PIECE",
+     "valid": true,
+     "displayName": "Write summary (AI)",
+     "skip": false,
+     "settings": {
+      "pieceName": "@activepieces/piece-ai",
+      "pieceVersion": "0.11.0",
+      "pieceType": "OFFICIAL",
+      "packageType": "REGISTRY",
+      "actionName": "summarizeText",
+      "input": {
+       "provider": "custom",
+       "model": "REPLACE_WITH_MODEL",
+       "text": "{{step_2}}",
+       "prompt": "Write a short, friendly monthly business summary (max 120 words) for the client from these KPIs. Mention revenue, outstanding amount and one suggestion."
+      },
+      "propertySettings": {
+       "provider": {
+        "type": "MANUAL"
+       },
+       "model": {
+        "type": "MANUAL"
+       },
+       "text": {
+        "type": "MANUAL"
+       },
+       "prompt": {
+        "type": "MANUAL"
+       }
+      },
+      "errorHandlingOptions": {
+       "retryOnFailure": {
+        "value": false
+       },
+       "continueOnFailure": {
+        "value": false
+       }
+      }
+     },
+     "nextAction": {
+      "name": "step_4",
+      "type": "PIECE",
+      "valid": true,
+      "displayName": "Email report (email stand-in)",
+      "skip": false,
+      "settings": {
+       "pieceName": "@activepieces/piece-http",
+       "pieceVersion": "0.12.2",
+       "pieceType": "OFFICIAL",
+       "packageType": "REGISTRY",
+       "actionName": "send_request",
+       "input": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "headers": {
+         "content-type": "application/json"
+        },
+        "queryParams": {},
+        "authType": "NONE",
+        "authFields": {},
+        "body_type": "json",
+        "body": {
+         "data": {
+          "type": "monthly_report",
+          "kpis": "{{step_2}}",
+          "summary": "{{step_3}}"
+         }
+        },
+        "failsafe": false
+       },
+       "propertySettings": {
+        "method": {
+         "type": "MANUAL"
+        },
+        "url": {
+         "type": "MANUAL"
+        },
+        "headers": {
+         "type": "MANUAL"
+        },
+        "queryParams": {
+         "type": "MANUAL"
+        },
+        "authType": {
+         "type": "MANUAL"
+        },
+        "authFields": {
+         "type": "MANUAL"
+        },
+        "body_type": {
+         "type": "MANUAL"
+        },
+        "body": {
+         "type": "MANUAL"
+        },
+        "failsafe": {
+         "type": "MANUAL"
+        }
+       },
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

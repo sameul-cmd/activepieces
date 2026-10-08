@@ -34,7 +34,8 @@ curl http://localhost:8080/api/v1/health                      # {"status":"Healt
 
 ### [ ] 0.5 — AI step with the owner's OpenAI-compatible endpoint (Custom provider; practice data)
 
-### [ ] 0.6 — Build the 6 starter flows as far as free/built-in pieces allow; export each flow JSON to `explore/flows/`
+### [~] 0.6 — Build the 6 starter flows as far as free/built-in pieces allow; export each flow JSON to `explore/flows/`
+- 1,3,4,5 ✅ tested; 2,6 built, waiting for AI endpoint env vars. Generator `docs/exploration/starter_flows.py`.
 - 1 lead capture · 2 AI email sorter · 3 review request · 4 invoice reminder · 5 social lead alert · 6 generic monthly report (ADR-014)
 
 ### [x] 0.7 — Backup → restore into a fresh local stack (pg_dump + .env), confirm a stored connection still decrypts

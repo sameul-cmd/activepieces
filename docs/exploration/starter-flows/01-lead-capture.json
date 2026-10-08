@@ -1,0 +1,205 @@
+{
+ "displayName": "01 Lead capture",
+ "schemaVersion": "16",
+ "trigger": {
+  "name": "trigger",
+  "type": "PIECE_TRIGGER",
+  "valid": true,
+  "displayName": "Catch Webhook",
+  "settings": {
+   "pieceName": "@activepieces/piece-webhook",
+   "pieceVersion": "0.1.42",
+   "pieceType": "OFFICIAL",
+   "packageType": "REGISTRY",
+   "triggerName": "catch_webhook",
+   "input": {
+    "authType": "none",
+    "authFields": {}
+   },
+   "propertySettings": {
+    "authType": {
+     "type": "MANUAL"
+    },
+    "authFields": {
+     "type": "MANUAL"
+    }
+   }
+  },
+  "nextAction": {
+   "name": "step_1",
+   "type": "CODE",
+   "valid": true,
+   "displayName": "Validate lead",
+   "skip": false,
+   "settings": {
+    "sourceCode": {
+     "packageJson": "{}",
+     "code": "export const code = async (i) => { if (!i.email || !String(i.email).includes('@')) throw new Error('Invalid lead: email missing'); return { name: i.name || '', email: String(i.email).toLowerCase(), message: i.message || '', source: i.source || 'website', received_at: new Date().toISOString() }; };"
+    },
+    "input": {
+     "name": "{{trigger['body']['name']}}",
+     "email": "{{trigger['body']['email']}}",
+     "message": "{{trigger['body']['message']}}",
+     "source": "{{trigger['body']['source']}}"
+    },
+    "errorHandlingOptions": {}
+   },
+   "nextAction": {
+    "name": "step_2",
+    "type": "PIECE",
+    "valid": true,
+    "displayName": "Save lead to table",
+    "skip": false,
+    "settings": {
+     "pieceName": "@activepieces/piece-tables",
+     "pieceVersion": "0.5.2",
+     "pieceType": "OFFICIAL",
+     "packageType": "REGISTRY",
+     "actionName": "tables-create-records",
+     "input": {
+      "table_id": "opskit_leads",
+      "values": {},
+      "records": [
+       "{{step_1}}"
+      ]
+     },
+     "propertySettings": {
+      "table_id": {
+       "type": "MANUAL"
+      },
+      "values": {
+       "type": "MANUAL"
+      },
+      "records": {
+       "type": "MANUAL"
+      }
+     },
+     "errorHandlingOptions": {
+      "retryOnFailure": {
+       "value": false
+      },
+      "continueOnFailure": {
+       "value": false
+      }
+     }
+    },
+    "nextAction": {
+     "name": "step_3",
+     "type": "PIECE",
+     "valid": true,
+     "displayName": "Notify owner (email stand-in)",
+     "skip": false,
+     "settings": {
+      "pieceName": "@activepieces/piece-http",
+      "pieceVersion": "0.12.2",
+      "pieceType": "OFFICIAL",
+      "packageType": "REGISTRY",
+      "actionName": "send_request",
+      "input": {
+       "method": "POST",
+       "url": "https://httpbin.org/post",
+       "headers": {
+        "content-type": "application/json"
+       },
+       "queryParams": {},
+       "authType": "NONE",
+       "authFields": {},
+       "body_type": "json",
+       "body": {
+        "data": {
+         "type": "new_lead",
+         "name": "{{step_1['name']}}",
+         "email": "{{step_1['email']}}",
+         "message": "{{step_1['message']}}"
+        }
+       },
+       "failsafe": false
+      },
+      "propertySettings": {
+       "method": {
+        "type": "MANUAL"
+       },
+       "url": {
+        "type": "MANUAL"
+       },
+       "headers": {
+        "type": "MANUAL"
+       },
+       "queryParams": {
+        "type": "MANUAL"
+       },
+       "authType": {
+        "type": "MANUAL"
+       },
+       "authFields": {
+        "type": "MANUAL"
+       },
+       "body_type": {
+        "type": "MANUAL"
+       },
+       "body": {
+        "type": "MANUAL"
+       },
+       "failsafe": {
+        "type": "MANUAL"
+       }
+      },
+      "errorHandlingOptions": {
+       "retryOnFailure": {
+        "value": false
+       },
+       "continueOnFailure": {
+        "value": false
+       }
+      }
+     },
+     "nextAction": {
+      "name": "step_4",
+      "type": "PIECE",
+      "valid": true,
+      "displayName": "Reply to caller",
+      "skip": false,
+      "settings": {
+       "pieceName": "@activepieces/piece-webhook",
+       "pieceVersion": "0.1.42",
+       "pieceType": "OFFICIAL",
+       "packageType": "REGISTRY",
+       "actionName": "return_response",
+       "input": {
+        "responseType": "json",
+        "respond": "stop",
+        "fields": {
+         "status": 200,
+         "headers": {},
+         "body": {
+          "ok": true,
+          "message": "Thanks {{step_1['name']}}, we'll be in touch."
+         }
+        }
+       },
+       "propertySettings": {
+        "responseType": {
+         "type": "MANUAL"
+        },
+        "respond": {
+         "type": "MANUAL"
+        },
+        "fields": {
+         "type": "MANUAL"
+        }
+       },
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

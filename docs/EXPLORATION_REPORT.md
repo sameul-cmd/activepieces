@@ -48,6 +48,18 @@
 | Stored connection | SECRET_TEXT for sendgrid/telegram-bot via `POST /api/v1/app-connections` | works | Referenced in steps as `{{connections['<externalId>']}}`; run logs show `**REDACTED**` |
 | Run log / failure display | API `GET /flow-runs/<id>` | works | Per-step status, input/output, `failedStep {name,message,displayName}` |
 
+## 2b. Starter flows (SPEC 11) — built with built-in pieces (ADR-015)
+Generator: `docs/exploration/starter_flows.py` → JSON in `docs/exploration/starter-flows/`. Stand-ins: Activepieces Tables (`opskit_leads`, `opskit_invoices`, referenced by **externalId**, so the same JSON works on any stack that has those tables) instead of Sheets/CRM; HTTP POST to a notify URL instead of email/Slack/WhatsApp.
+| # | Flow | Pieces | Test | Result |
+|---|---|---|---|---|
+| 1 | Lead capture | webhook → code (validate) → tables create → HTTP notify → webhook reply | valid lead; lead without email | ✅ saved to table, notified, replied; invalid → FAILED with clear message |
+| 2 | AI email sorter | webhook → AI `classifyText` → router (urgent / else) → notify/label → reply | — | ⏳ built; needs AI provider (owner's OpenAI-compatible endpoint) |
+| 3 | Review request | webhook → code → delay (7 days; `wait_minutes` override for tests) → notify | wait 1 min | ✅ paused, resumed on time, notified |
+| 4 | Invoice reminder | schedule (weekdays 09:00) → tables find → code (unpaid & overdue) → loop → notify | 3 seeded invoices (1-min schedule test copy) | ✅ only the overdue unpaid invoice got a reminder |
+| 5 | Social lead alert | webhook (lead-ads shape) → code → tables create → notify | sample lead | ✅ |
+| 6 | Generic monthly report (ADR-014) | schedule (monthly) → tables find → code KPIs → AI `summarizeText` → notify | — | ⏳ built; needs AI provider |
+Notes: `tables-find-records` returns rows as `{id, cells: {<fieldId>: {fieldName, value}}}`; `tables-create-records` accepts `records` JSON keyed by column name (advanced prop). Expressions inside `{{ }}` were kept to plain references (logic lives in code steps). Error convention: invalid input throws in the first code step → run FAILED → picked up by the SQL detector (no CE alerting). Real Gmail/Sheets/Slack/WhatsApp connections are left for the laptop.
+
 ## 3. Performance on this machine
 | Task | Input size | Time | Notes |
 |---|---|---|---|

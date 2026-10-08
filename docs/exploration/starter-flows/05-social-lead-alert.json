@@ -1,0 +1,164 @@
+{
+ "displayName": "05 Social lead alert",
+ "schemaVersion": "16",
+ "trigger": {
+  "name": "trigger",
+  "type": "PIECE_TRIGGER",
+  "valid": true,
+  "displayName": "Catch Webhook",
+  "settings": {
+   "pieceName": "@activepieces/piece-webhook",
+   "pieceVersion": "0.1.42",
+   "pieceType": "OFFICIAL",
+   "packageType": "REGISTRY",
+   "triggerName": "catch_webhook",
+   "input": {
+    "authType": "none",
+    "authFields": {}
+   },
+   "propertySettings": {
+    "authType": {
+     "type": "MANUAL"
+    },
+    "authFields": {
+     "type": "MANUAL"
+    }
+   }
+  },
+  "nextAction": {
+   "name": "step_1",
+   "type": "CODE",
+   "valid": true,
+   "displayName": "Normalise lead-ads payload",
+   "skip": false,
+   "settings": {
+    "sourceCode": {
+     "packageJson": "{}",
+     "code": "export const code = async (i) => { const f = Object.fromEntries((i.fields || []).map(x => [x.name, x.value])); if (!f.email && !f.phone) throw new Error('Lead has no email or phone'); return { name: f.full_name || '', email: f.email || '', phone: f.phone || '', campaign: i.campaign || '' }; };"
+    },
+    "input": {
+     "fields": "{{trigger['body']['field_data']}}",
+     "campaign": "{{trigger['body']['campaign_name']}}"
+    },
+    "errorHandlingOptions": {}
+   },
+   "nextAction": {
+    "name": "step_2",
+    "type": "PIECE",
+    "valid": true,
+    "displayName": "Add to CRM (table stand-in)",
+    "skip": false,
+    "settings": {
+     "pieceName": "@activepieces/piece-tables",
+     "pieceVersion": "0.5.2",
+     "pieceType": "OFFICIAL",
+     "packageType": "REGISTRY",
+     "actionName": "tables-create-records",
+     "input": {
+      "table_id": "opskit_leads",
+      "values": {},
+      "records": [
+       {
+        "name": "{{step_1['name']}}",
+        "email": "{{step_1['email']}}",
+        "message": "{{step_1['phone']}}",
+        "source": "ads:{{step_1['campaign']}}",
+        "received_at": "{{trigger['body']['created_time']}}"
+       }
+      ]
+     },
+     "propertySettings": {
+      "table_id": {
+       "type": "MANUAL"
+      },
+      "values": {
+       "type": "MANUAL"
+      },
+      "records": {
+       "type": "MANUAL"
+      }
+     },
+     "errorHandlingOptions": {
+      "retryOnFailure": {
+       "value": false
+      },
+      "continueOnFailure": {
+       "value": false
+      }
+     }
+    },
+    "nextAction": {
+     "name": "step_3",
+     "type": "PIECE",
+     "valid": true,
+     "displayName": "Alert sales (WhatsApp/email stand-in)",
+     "skip": false,
+     "settings": {
+      "pieceName": "@activepieces/piece-http",
+      "pieceVersion": "0.12.2",
+      "pieceType": "OFFICIAL",
+      "packageType": "REGISTRY",
+      "actionName": "send_request",
+      "input": {
+       "method": "POST",
+       "url": "https://httpbin.org/post",
+       "headers": {
+        "content-type": "application/json"
+       },
+       "queryParams": {},
+       "authType": "NONE",
+       "authFields": {},
+       "body_type": "json",
+       "body": {
+        "data": {
+         "type": "social_lead",
+         "name": "{{step_1['name']}}",
+         "phone": "{{step_1['phone']}}",
+         "campaign": "{{step_1['campaign']}}"
+        }
+       },
+       "failsafe": false
+      },
+      "propertySettings": {
+       "method": {
+        "type": "MANUAL"
+       },
+       "url": {
+        "type": "MANUAL"
+       },
+       "headers": {
+        "type": "MANUAL"
+       },
+       "queryParams": {
+        "type": "MANUAL"
+       },
+       "authType": {
+        "type": "MANUAL"
+       },
+       "authFields": {
+        "type": "MANUAL"
+       },
+       "body_type": {
+        "type": "MANUAL"
+       },
+       "body": {
+        "type": "MANUAL"
+       },
+       "failsafe": {
+        "type": "MANUAL"
+       }
+      },
+      "errorHandlingOptions": {
+       "retryOnFailure": {
+        "value": false
+       },
+       "continueOnFailure": {
+        "value": false
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

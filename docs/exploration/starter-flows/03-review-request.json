@@ -1,0 +1,153 @@
+{
+ "displayName": "03 Review request",
+ "schemaVersion": "16",
+ "trigger": {
+  "name": "trigger",
+  "type": "PIECE_TRIGGER",
+  "valid": true,
+  "displayName": "Catch Webhook",
+  "settings": {
+   "pieceName": "@activepieces/piece-webhook",
+   "pieceVersion": "0.1.42",
+   "pieceType": "OFFICIAL",
+   "packageType": "REGISTRY",
+   "triggerName": "catch_webhook",
+   "input": {
+    "authType": "none",
+    "authFields": {}
+   },
+   "propertySettings": {
+    "authType": {
+     "type": "MANUAL"
+    },
+    "authFields": {
+     "type": "MANUAL"
+    }
+   }
+  },
+  "nextAction": {
+   "name": "step_1",
+   "type": "CODE",
+   "valid": true,
+   "displayName": "Check order",
+   "skip": false,
+   "settings": {
+    "sourceCode": {
+     "packageJson": "{}",
+     "code": "export const code = async (i) => { if (!i.email) throw new Error('Order without customer email'); return { email: i.email, name: i.name || 'there', order: i.order_id, wait: Number(i.wait_minutes) > 0 ? Number(i.wait_minutes) : 10080 }; };"
+    },
+    "input": {
+     "email": "{{trigger['body']['email']}}",
+     "name": "{{trigger['body']['name']}}",
+     "order_id": "{{trigger['body']['order_id']}}",
+     "wait_minutes": "{{trigger['body']['wait_minutes']}}"
+    },
+    "errorHandlingOptions": {}
+   },
+   "nextAction": {
+    "name": "step_2",
+    "type": "PIECE",
+    "valid": true,
+    "displayName": "Wait 7 days (wait_minutes overrides for tests)",
+    "skip": false,
+    "settings": {
+     "pieceName": "@activepieces/piece-delay",
+     "pieceVersion": "0.3.35",
+     "pieceType": "OFFICIAL",
+     "packageType": "REGISTRY",
+     "actionName": "delayFor",
+     "input": {
+      "delayFor": "{{step_1['wait']}}",
+      "unit": "minutes"
+     },
+     "propertySettings": {
+      "delayFor": {
+       "type": "MANUAL"
+      },
+      "unit": {
+       "type": "MANUAL"
+      }
+     },
+     "errorHandlingOptions": {
+      "retryOnFailure": {
+       "value": false
+      },
+      "continueOnFailure": {
+       "value": false
+      }
+     }
+    },
+    "nextAction": {
+     "name": "step_3",
+     "type": "PIECE",
+     "valid": true,
+     "displayName": "Send review request (email stand-in)",
+     "skip": false,
+     "settings": {
+      "pieceName": "@activepieces/piece-http",
+      "pieceVersion": "0.12.2",
+      "pieceType": "OFFICIAL",
+      "packageType": "REGISTRY",
+      "actionName": "send_request",
+      "input": {
+       "method": "POST",
+       "url": "https://httpbin.org/post",
+       "headers": {
+        "content-type": "application/json"
+       },
+       "queryParams": {},
+       "authType": "NONE",
+       "authFields": {},
+       "body_type": "json",
+       "body": {
+        "data": {
+         "type": "review_request",
+         "to": "{{step_1['email']}}",
+         "text": "Hi {{step_1['name']}}, how was order {{step_1['order']}}? Leave a review: https://example.com/review"
+        }
+       },
+       "failsafe": false
+      },
+      "propertySettings": {
+       "method": {
+        "type": "MANUAL"
+       },
+       "url": {
+        "type": "MANUAL"
+       },
+       "headers": {
+        "type": "MANUAL"
+       },
+       "queryParams": {
+        "type": "MANUAL"
+       },
+       "authType": {
+        "type": "MANUAL"
+       },
+       "authFields": {
+        "type": "MANUAL"
+       },
+       "body_type": {
+        "type": "MANUAL"
+       },
+       "body": {
+        "type": "MANUAL"
+       },
+       "failsafe": {
+        "type": "MANUAL"
+       }
+      },
+      "errorHandlingOptions": {
+       "retryOnFailure": {
+        "value": false
+       },
+       "continueOnFailure": {
+        "value": false
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

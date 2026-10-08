@@ -1,0 +1,240 @@
+{
+ "displayName": "02 AI email sorter",
+ "schemaVersion": "16",
+ "trigger": {
+  "name": "trigger",
+  "type": "PIECE_TRIGGER",
+  "valid": true,
+  "displayName": "Catch Webhook",
+  "settings": {
+   "pieceName": "@activepieces/piece-webhook",
+   "pieceVersion": "0.1.42",
+   "pieceType": "OFFICIAL",
+   "packageType": "REGISTRY",
+   "triggerName": "catch_webhook",
+   "input": {
+    "authType": "none",
+    "authFields": {}
+   },
+   "propertySettings": {
+    "authType": {
+     "type": "MANUAL"
+    },
+    "authFields": {
+     "type": "MANUAL"
+    }
+   }
+  },
+  "nextAction": {
+   "name": "step_1",
+   "type": "PIECE",
+   "valid": true,
+   "displayName": "Classify email (AI)",
+   "skip": false,
+   "settings": {
+    "pieceName": "@activepieces/piece-ai",
+    "pieceVersion": "0.11.0",
+    "pieceType": "OFFICIAL",
+    "packageType": "REGISTRY",
+    "actionName": "classifyText",
+    "input": {
+     "provider": "custom",
+     "model": "REPLACE_WITH_MODEL",
+     "text": "Subject: {{trigger['body']['subject']}}\n\n{{trigger['body']['body']}}",
+     "categories": [
+      "urgent",
+      "sales",
+      "support",
+      "spam",
+      "other"
+     ]
+    },
+    "propertySettings": {
+     "provider": {
+      "type": "MANUAL"
+     },
+     "model": {
+      "type": "MANUAL"
+     },
+     "text": {
+      "type": "MANUAL"
+     },
+     "categories": {
+      "type": "MANUAL"
+     }
+    },
+    "errorHandlingOptions": {
+     "retryOnFailure": {
+      "value": false
+     },
+     "continueOnFailure": {
+      "value": false
+     }
+    }
+   },
+   "nextAction": {
+    "name": "step_2",
+    "type": "ROUTER",
+    "valid": true,
+    "displayName": "Route by category",
+    "skip": false,
+    "settings": {
+     "executionType": "EXECUTE_FIRST_MATCH",
+     "branches": [
+      {
+       "branchType": "CONDITION",
+       "branchName": "Urgent",
+       "conditions": [
+        [
+         {
+          "firstValue": "{{step_1}}",
+          "operator": "TEXT_EXACTLY_MATCHES",
+          "secondValue": "urgent",
+          "caseSensitive": false
+         }
+        ]
+       ]
+      },
+      {
+       "branchType": "FALLBACK",
+       "branchName": "Everything else"
+      }
+     ]
+    },
+    "children": [
+     {
+      "name": "step_3",
+      "type": "PIECE",
+      "valid": true,
+      "displayName": "Alert team now (Slack stand-in)",
+      "skip": false,
+      "settings": {
+       "pieceName": "@activepieces/piece-http",
+       "pieceVersion": "0.12.2",
+       "pieceType": "OFFICIAL",
+       "packageType": "REGISTRY",
+       "actionName": "send_request",
+       "input": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "headers": {
+         "content-type": "application/json"
+        },
+        "queryParams": {},
+        "authType": "NONE",
+        "authFields": {},
+        "body_type": "json",
+        "body": {
+         "data": {
+          "type": "urgent_email",
+          "subject": "{{trigger['body']['subject']}}",
+          "from": "{{trigger['body']['from']}}"
+         }
+        },
+        "failsafe": false
+       },
+       "propertySettings": {
+        "method": {
+         "type": "MANUAL"
+        },
+        "url": {
+         "type": "MANUAL"
+        },
+        "headers": {
+         "type": "MANUAL"
+        },
+        "queryParams": {
+         "type": "MANUAL"
+        },
+        "authType": {
+         "type": "MANUAL"
+        },
+        "authFields": {
+         "type": "MANUAL"
+        },
+        "body_type": {
+         "type": "MANUAL"
+        },
+        "body": {
+         "type": "MANUAL"
+        },
+        "failsafe": {
+         "type": "MANUAL"
+        }
+       },
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      }
+     },
+     {
+      "name": "step_4",
+      "type": "CODE",
+      "valid": true,
+      "displayName": "Label only (Gmail label stand-in)",
+      "skip": false,
+      "settings": {
+       "sourceCode": {
+        "packageJson": "{}",
+        "code": "export const code = async (i) => ({ label: i.category });"
+       },
+       "input": {
+        "category": "{{step_1}}"
+       },
+       "errorHandlingOptions": {}
+      }
+     }
+    ],
+    "nextAction": {
+     "name": "step_5",
+     "type": "PIECE",
+     "valid": true,
+     "displayName": "Reply to caller",
+     "skip": false,
+     "settings": {
+      "pieceName": "@activepieces/piece-webhook",
+      "pieceVersion": "0.1.42",
+      "pieceType": "OFFICIAL",
+      "packageType": "REGISTRY",
+      "actionName": "return_response",
+      "input": {
+       "responseType": "json",
+       "respond": "stop",
+       "fields": {
+        "status": 200,
+        "headers": {},
+        "body": {
+         "category": "{{step_1}}"
+        }
+       }
+      },
+      "propertySettings": {
+       "responseType": {
+        "type": "MANUAL"
+       },
+       "respond": {
+        "type": "MANUAL"
+       },
+       "fields": {
+        "type": "MANUAL"
+       }
+      },
+      "errorHandlingOptions": {
+       "retryOnFailure": {
+        "value": false
+       },
+       "continueOnFailure": {
+        "value": false
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

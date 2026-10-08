@@ -1,0 +1,170 @@
+{
+ "displayName": "04 Invoice reminder",
+ "schemaVersion": "16",
+ "trigger": {
+  "name": "trigger",
+  "type": "PIECE_TRIGGER",
+  "valid": true,
+  "displayName": "Every weekday 09:00",
+  "settings": {
+   "pieceName": "@activepieces/piece-schedule",
+   "pieceVersion": "0.1.22",
+   "pieceType": "OFFICIAL",
+   "packageType": "REGISTRY",
+   "triggerName": "every_day",
+   "input": {
+    "hour_of_the_day": 9,
+    "timezone": "UTC",
+    "run_on_weekends": false
+   },
+   "propertySettings": {
+    "hour_of_the_day": {
+     "type": "MANUAL"
+    },
+    "timezone": {
+     "type": "MANUAL"
+    },
+    "run_on_weekends": {
+     "type": "MANUAL"
+    }
+   }
+  },
+  "nextAction": {
+   "name": "step_1",
+   "type": "PIECE",
+   "valid": true,
+   "displayName": "Read invoices",
+   "skip": false,
+   "settings": {
+    "pieceName": "@activepieces/piece-tables",
+    "pieceVersion": "0.5.2",
+    "pieceType": "OFFICIAL",
+    "packageType": "REGISTRY",
+    "actionName": "tables-find-records",
+    "input": {
+     "table_id": "opskit_invoices",
+     "filters": {},
+     "limit": 1000
+    },
+    "propertySettings": {
+     "table_id": {
+      "type": "MANUAL"
+     },
+     "filters": {
+      "type": "MANUAL"
+     },
+     "limit": {
+      "type": "MANUAL"
+     }
+    },
+    "errorHandlingOptions": {
+     "retryOnFailure": {
+      "value": false
+     },
+     "continueOnFailure": {
+      "value": false
+     }
+    }
+   },
+   "nextAction": {
+    "name": "step_2",
+    "type": "CODE",
+    "valid": true,
+    "displayName": "Pick unpaid + overdue",
+    "skip": false,
+    "settings": {
+     "sourceCode": {
+      "packageJson": "{}",
+      "code": "export const code = async (i) => { const today = new Date().toISOString().slice(0, 10); const rows = (i.rows || []).map(r => Object.fromEntries((r.cells ? Object.values(r.cells) : []).map(c => [c.fieldName, c.value]).concat(Object.entries(r).filter(([k]) => typeof r[k] !== 'object')))); const due = rows.filter(r => String(r.status || '').toLowerCase() === 'unpaid' && String(r.due_date || '9999') < today); return { due, count: due.length }; };"
+     },
+     "input": {
+      "rows": "{{step_1}}"
+     },
+     "errorHandlingOptions": {}
+    },
+    "nextAction": {
+     "name": "step_3",
+     "type": "LOOP_ON_ITEMS",
+     "valid": true,
+     "displayName": "For each overdue invoice",
+     "skip": false,
+     "settings": {
+      "items": "{{step_2['due']}}"
+     },
+     "firstLoopAction": {
+      "name": "step_4",
+      "type": "PIECE",
+      "valid": true,
+      "displayName": "Send reminder (email stand-in)",
+      "skip": false,
+      "settings": {
+       "pieceName": "@activepieces/piece-http",
+       "pieceVersion": "0.12.2",
+       "pieceType": "OFFICIAL",
+       "packageType": "REGISTRY",
+       "actionName": "send_request",
+       "input": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "headers": {
+         "content-type": "application/json"
+        },
+        "queryParams": {},
+        "authType": "NONE",
+        "authFields": {},
+        "body_type": "json",
+        "body": {
+         "data": {
+          "type": "invoice_reminder",
+          "to": "{{step_3['item']['email']}}",
+          "customer": "{{step_3['item']['customer']}}",
+          "amount": "{{step_3['item']['amount']}}",
+          "due_date": "{{step_3['item']['due_date']}}"
+         }
+        },
+        "failsafe": false
+       },
+       "propertySettings": {
+        "method": {
+         "type": "MANUAL"
+        },
+        "url": {
+         "type": "MANUAL"
+        },
+        "headers": {
+         "type": "MANUAL"
+        },
+        "queryParams": {
+         "type": "MANUAL"
+        },
+        "authType": {
+         "type": "MANUAL"
+        },
+        "authFields": {
+         "type": "MANUAL"
+        },
+        "body_type": {
+         "type": "MANUAL"
+        },
+        "body": {
+         "type": "MANUAL"
+        },
+        "failsafe": {
+         "type": "MANUAL"
+        }
+       },
+       "errorHandlingOptions": {
+        "retryOnFailure": {
+         "value": false
+        },
+        "continueOnFailure": {
+         "value": false
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
