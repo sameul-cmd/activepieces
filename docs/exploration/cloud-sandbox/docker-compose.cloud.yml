@@ -1,0 +1,13 @@
+# Cloud-sandbox only (no IPv6 kernel, TLS-intercepting egress). Not needed on WSL/VPS.
+x-cloud: &cloud
+  volumes:
+    - ./cache:/usr/src/app/cache
+    - ./cloud:/cloud:ro
+  environment:
+    NODE_EXTRA_CA_CERTS: /cloud/ca.crt
+    NODE_OPTIONS: --require /cloud/ipv4-listen.cjs
+services:
+  app:
+    <<: *cloud
+  worker:
+    <<: *cloud
