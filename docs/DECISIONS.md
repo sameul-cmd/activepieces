@@ -73,3 +73,9 @@ Format: Context → Decision → Alternatives → Consequences. Never delete; ma
 - **Context:** SPEC assumes a WSL2 laptop; the Claude Code cloud container has Docker (4 CPU / 15 GB RAM) and a headless browser.
 - **Decision:** Phase 0 runs in the cloud container first. Every step is written so it can be repeated on the WSL laptop. The report records which environment produced each number.
 - **Consequences:** RAM/CPU numbers from the cloud may differ from the 12 GB laptop; laptop-specific checks (Docker Desktop, WSL networking) are re-checked when work moves there. Cloud containers are ephemeral: nothing local survives a session.
+
+### ADR-014: Starter flow #6 is a generic monthly report (not "Elmo")
+- **Status:** accepted (owner, 2026-10-08)
+- **Context:** The roadmap's starter list included "Elmo monthly report (schedule → Elmo API → email summary)", which doesn't belong to this project (likely mixed in from another plan).
+- **Decision:** Flow #6 = generic monthly report: schedule → numbers from a Google Sheet or any HTTP API → AI summary → email to the client.
+- **Consequences:** Works for any client; demonstrates the AI step. No Elmo integration anywhere in the kit.

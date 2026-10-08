@@ -150,7 +150,7 @@ Phase 0 records real RAM use, startup time, worker behavior, and CE feature avai
 
 ## 11. Flow template library (Improvement 4)
 Templates in `opskit/flows/<template>/`: `flow.json` (exported from Activepieces), `README.md` (what it does, trigger, steps, connections needed, how to pause, test data), `test/` (sample payloads), `CHECKLIST.md` (roadmap testing checklist: 5+ runs, failure cases, error notifications to owner, client-owned credentials).
-Starter set (roadmap): 1 lead capture (webhook form → sheet → owner email → auto-reply), 2 AI email sorter (Gmail → AI classify → label + Slack), 3 review request (order → wait 7 days → email), 4 invoice reminder (schedule → unpaid rows → reminder), 5 social lead alert (lead ads → CRM → WhatsApp/email), 6 Elmo monthly report (schedule → Elmo API → email summary).
+Starter set (roadmap): 1 lead capture (webhook form → sheet → owner email → auto-reply), 2 AI email sorter (Gmail → AI classify → label + Slack), 3 review request (order → wait 7 days → email), 4 invoice reminder (schedule → unpaid rows → reminder), 5 social lead alert (lead ads → CRM → WhatsApp/email), 6 generic monthly report (schedule → pull numbers from a Google Sheet or any HTTP API → AI summary → email to the client) — replaces the roadmap's "Elmo monthly report" (owner, 2026-10-08).
 Every template includes an **error branch or failure notification** convention consistent with Section 10. Import/export method uses what CE supports *(verify: UI import/export vs API)*; if only UI, `opskit flows import` prints step-by-step instructions and validates the JSON.
 
 ## 12. Safe upgrades (Improvement 5)

@@ -12,6 +12,7 @@
 - **Done this session:** Ops-kit starter package (made for Kilo Code) adapted to be agent-neutral and committed on top of `0.92.2`: rules/workflows moved to `docs/ai-workflow/`, wrappers for Kilo (`.kilo/commands/`) and Claude Code (`.claude/commands/ops-*`, `.claude/rules/opskit.md`), new `handoff` workflow, pointer line at the top of upstream `AGENTS.md`/`CLAUDE.md` (ledger patch #1), pinned tag recorded.
 - **Exact next step:** run the `explore` workflow (Phase 0). Start with `docs/tasks/phase-0.md` (create it via `start-phase` if missing), then install Activepieces CE 0.92.2 with Docker Compose the official way.
 - **Not carried over (temporary):** nothing running yet.
+- **Owner confirmed (2026-10-08):** the 8 improvements in SPEC 2.1 as written; flow #6 replaced by a generic monthly report (ADR-014).
 - **Open questions for the owner:** SPEC Appendix B (business name/ops-hub domain, VPS provider, backup target, response time). Not blocking Phase 0.
 - **Owner to-dos:** disable GitHub Actions in the fork (Settings → Actions); optionally make `opskit-main` the default branch.
 
@@ -35,6 +36,7 @@
 
 ## Known issues
 <!-- Bugs or gaps found outside current task scope. -->
+- The roadmap `05-activepieces-roadmap.md` is not in the repo; its starter list contained an unrelated "Elmo" flow, now replaced (ADR-014). If the roadmap turns up, check it for other mixed-in items.
 - Upstream already ships `packages/pieces/custom/` (empty `README.md`) and a `.claude/` folder; the original package assumed neither existed. We only add files there (no upstream edits).
 
 ## Phase verification reports
