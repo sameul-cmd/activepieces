@@ -1,9 +1,9 @@
 # Phase 0 — Fork, set up & explore Activepieces (as it is)
 
 ## Open questions for the owner
-- Cloud sandbox network policy blocks `cloud.activepieces.com` (pieces catalogue) → owner to allow it, or Phase 0 piece-dependent tasks move to the WSL laptop.
-- Gemini free-tier API key for the AI step (practice data only) — owner provides, or the AI step is tested later.
-- Third-party accounts (Google Sheets/Gmail, Slack…) for starter flows: proposed to use Activepieces' built-in pieces (Tables, Webhook, HTTP, Schedule, Email) in Phase 0 and connect real accounts later.
+- Cloud sandbox: owner set network to Full (2026-10-08); containers still need the relay in `docs/exploration/cloud-sandbox/` (sandbox-only).
+- AI: owner's OpenAI-compatible endpoint — needs `OPSKIT_AI_BASE_URL`, `OPSKIT_AI_API_KEY`, `OPSKIT_AI_MODEL` in the agent environment.
+- Third-party accounts: owner approved built-in pieces for Phase 0 (ADR-015).
 
 ## Reproduce the install (any Linux shell with Docker)
 ```bash
@@ -32,7 +32,7 @@ curl http://localhost:8080/api/v1/health                      # {"status":"Healt
 ### [ ] 0.4 — Triggers & logic: webhook (local curl; ngrok only on laptop), schedule, branch, loop, delay, code step, HTTP piece; run logs, retries, failure display
 - Needs pieces catalogue (blocked in cloud until network allowed).
 
-### [ ] 0.5 — AI step with Gemini free key (practice data)
+### [ ] 0.5 — AI step with the owner's OpenAI-compatible endpoint (Custom provider; practice data)
 
 ### [ ] 0.6 — Build the 6 starter flows as far as free/built-in pieces allow; export each flow JSON to `explore/flows/`
 - 1 lead capture · 2 AI email sorter · 3 review request · 4 invoice reminder · 5 social lead alert · 6 generic monthly report (ADR-014)

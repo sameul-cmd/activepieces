@@ -79,3 +79,8 @@ Format: Context → Decision → Alternatives → Consequences. Never delete; ma
 - **Context:** The roadmap's starter list included "Elmo monthly report (schedule → Elmo API → email summary)", which doesn't belong to this project (likely mixed in from another plan).
 - **Decision:** Flow #6 = generic monthly report: schedule → numbers from a Google Sheet or any HTTP API → AI summary → email to the client.
 - **Consequences:** Works for any client; demonstrates the AI step. No Elmo integration anywhere in the kit.
+
+### ADR-015: Owner answers for Phases 0–2 (2026-10-08)
+- **Status:** accepted (owner)
+- **Decision:** Ops-hub at `automate.autonyxai.shop`; VPS provider-neutral (free tier first); backups to Google Drive via rclone (configurable); 12 h response; AI = owner's OpenAI-compatible endpoint via Activepieces `CUSTOM` provider; Phase 0 flows on built-in pieces; client stacks `AP_TELEMETRY_ENABLED=false`.
+- **Consequences:** `client.yaml`/`host.yaml` schemas keep provider and backup remote as free fields; Google Drive needs an rclone OAuth token per host (Phase 3 documents it).

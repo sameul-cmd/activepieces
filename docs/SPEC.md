@@ -183,7 +183,7 @@ Laptop: all commands in WSL Ubuntu. Key commands: `opskit/bin/opskit doctor`, `o
 Each phase: implement → `opskit/bin/check` → (from Phase 2) `opskit/bin/opskit selftest` → pass acceptance → update `docs/PROGRESS.md` → continue.
 
 ### Phase 0 — Fork, set up & explore Activepieces (as it is, no changes)
-Fork on GitHub; clone into WSL (`~/work/activepieces-ops`); `upstream` remote fetch-only; pin `main` to the latest release tag (record tag + SHA in `docs/UPSTREAM_CHANGES.md`); disable upstream GitHub Actions in the fork. Install locally **the official way** (docker compose, CE — no `AP_EDITION=ee`), apply the worker `AP_FRONTEND_URL=http://app` fix, reduce worker replicas to 1, confirm `/api/v1/health` and the Workers page. Explore with free tools: admin account; builder basics; webhook trigger via ngrok free; schedule trigger; branches, loops, delays, code step, HTTP piece; AI step with a Gemini free-tier key (practice data only); run logs, retries, failure display; flow import/export; templates; Platform Admin in CE — record exactly what's available vs locked (projects, API keys, piece management, alerts/notifications, branding, audit logs, Git Sync); build the 6 starter flows by hand as far as free accounts allow; back up the Postgres volume and `.env`, restore into a fresh local stack; measure RAM/CPU idle and under 20 test runs; try upstream piece development locally (create a hello-world piece in dev mode) if the laptop can handle it; inspect run tables for Section 10.3 *(read-only)*. Fill every section of `docs/EXPLORATION_REPORT.md` (answers to all *(verify)* items). No opskit code, no upstream changes.
+Fork on GitHub; clone into WSL (`~/work/activepieces-ops`); `upstream` remote fetch-only; pin `main` to the latest release tag (record tag + SHA in `docs/UPSTREAM_CHANGES.md`); disable upstream GitHub Actions in the fork. Install locally **the official way** (docker compose, CE — no `AP_EDITION=ee`), apply the worker `AP_FRONTEND_URL=http://app` fix, reduce worker replicas to 1, confirm `/api/v1/health` and the Workers page. Explore with free tools: admin account; builder basics; webhook trigger via ngrok free; schedule trigger; branches, loops, delays, code step, HTTP piece; AI step with the owner's OpenAI-compatible endpoint (practice data only; Appendix B.5); run logs, retries, failure display; flow import/export; templates; Platform Admin in CE — record exactly what's available vs locked (projects, API keys, piece management, alerts/notifications, branding, audit logs, Git Sync); build the 6 starter flows by hand as far as free accounts allow; back up the Postgres volume and `.env`, restore into a fresh local stack; measure RAM/CPU idle and under 20 test runs; try upstream piece development locally (create a hello-world piece in dev mode) if the laptop can handle it; inspect run tables for Section 10.3 *(read-only)*. Fill every section of `docs/EXPLORATION_REPORT.md` (answers to all *(verify)* items). No opskit code, no upstream changes.
 **Accept:** Activepieces CE runs locally with worker registered; report complete with CE feature matrix, *(verify)* answers, RAM/CPU numbers, flow-building notes for all 6 starters, and a successful local backup→restore; blockers/mismatches logged and owner asked before continuing.
 
 ### Phase 1 — Opskit foundation
@@ -241,8 +241,11 @@ Practice production run on a real VPS (Oracle Always Free if capacity allows, el
 | R5 | Oracle free VM for first client | Practice/ops-hub only; paid VPS for clients | Capacity and reliability |
 | R6 | Update script | Staging + smoke tests + rollback | Updates are the main breakage risk |
 
-## Appendix B — Open questions for the owner
-1. Your business name and the domain for the ops-hub (e.g. `ops.yourbrand.com`)?
-2. Preferred VPS provider for clients (Hetzner, DigitalOcean, Vultr, Contabo…)?
-3. Off-server backup target: Backblaze B2 (10 GB free), Google Drive, or another VPS?
-4. Response-time promise for care clients (default 12 h)?
+## Appendix B — Open questions for the owner (answered 2026-10-08)
+1. Ops-hub domain: **`automate.autonyxai.shop`** (brand: Autonyx AI *(inferred from the domain)*).
+2. VPS provider: **undecided** — owner will try a free option first (e.g. Oracle Always Free); paid provider chosen later. Kit must stay provider-neutral.
+3. Off-server backup target: **Google Drive** (tentative) via rclone; keep the remote configurable.
+4. Response-time promise: **12 h**.
+5. AI provider for practice and demos: owner's **OpenAI-compatible custom endpoint (BYOK)** instead of Gemini; Activepieces CE has a `CUSTOM` (OpenAI-compatible) AI provider. Base URL/key/model live only in environment variables, never in git.
+6. Starter flows in Phase 0 use built-in pieces (Activepieces Tables, Webhook, HTTP, Schedule, email); real third-party accounts are connected later on the laptop.
+7. Client stacks render `AP_TELEMETRY_ENABLED=false`.

@@ -10,5 +10,5 @@
 - Encrypt `.env` escrow with the owner's age public key; never store the private key in the repo or on hosts.
 - Detectors/reports use a read-only DB role and read-only SQL.
 - Alert/report payloads: no secrets, no full personal data; error excerpts ≤ 300 chars.
-- Gemini free tier only with practice data; client AI steps use client-owned keys.
+- The owner's AI endpoint (BYOK) only with practice data; client AI steps use client-owned keys. Never print or commit AI keys.
 - Never set `AP_EDITION=ee`, never touch `packages/ee/`, never add a license key.

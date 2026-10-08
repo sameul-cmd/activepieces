@@ -14,7 +14,7 @@
 | ngrok (free) | Local webhook testing only |
 
 ## 2. Accounts (free unless noted)
-GitHub (fork, Actions, GHCR) · Telegram bot via @BotFather (demo alerts) · Gemini API key (free tier, practice data only) · ngrok free · UptimeRobot free · Backblaze B2 (10 GB free) or other rclone remote · VPS provider (paid, per client) · domain (owner + clients) · Oracle Cloud (optional, practice).
+GitHub (fork, Actions, GHCR) · Telegram bot via @BotFather (demo alerts) · owner's OpenAI-compatible AI endpoint (BYOK, practice data only; replaces Gemini) · ngrok free · UptimeRobot free · Backblaze B2 (10 GB free) or other rclone remote · VPS provider (paid, per client) · domain (owner + clients) · Oracle Cloud (optional, practice).
 
 ## 3. Opskit variables (per client, in `client.yaml`; secrets in host `.env` only)
 | Name | Where | How to get |
@@ -27,13 +27,14 @@ GitHub (fork, Actions, GHCR) · Telegram bot via @BotFather (demo alerts) · Gem
 | SMTP host/user/pass | ops-hub connection | provider (e.g. Brevo/Gmail app password) |
 | Slack webhook URL | ops-hub connection | Slack app → Incoming Webhooks |
 | WhatsApp Cloud API token + phone id | ops-hub connection (client) | Meta developer app (client-provided) |
+| `OPSKIT_AI_BASE_URL`, `OPSKIT_AI_API_KEY`, `OPSKIT_AI_MODEL` | agent environment only (cloud env settings / WSL shell profile) | owner's OpenAI-compatible endpoint; entered in Activepieces → AI providers → Custom |
 | rclone remote | host | `rclone config` (B2 key id/app key) |
 | age public key | repo `opskit/keys/owner.age.pub` (public only) | `age-keygen`; private key offline |
 
 ## 4. Rules
 - Never commit `.env`, private keys, `opskit/clients/`, dumps, IPs of client hosts.
 - Keep the age private key and each client's `AP_ENCRYPTION_KEY` recoverable (password manager + escrow).
-- Use Gemini free tier only with practice data; client AI steps use the client's own paid keys.
+- Use the owner's AI endpoint only with practice data; client AI steps use the client's own keys.
 
 ## 5. Where work runs (ADR-013)
 | Environment | Use | Notes |
